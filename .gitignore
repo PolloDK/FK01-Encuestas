@@ -1,0 +1,36 @@
+# === Entornos virtuales ===
+.venv/
+env/
+venv/
+
+# === Archivos de configuración sensibles ===
+.env
+
+# === Carpeta completa de datos ===
+data/
+
+# (Opcional) Si quieres mantener algún archivo dentro de data/
+# !data/encuestas.csv
+
+# === Pycache y bytecode ===
+__pycache__/
+*.py[cod]
+*.pyo
+
+# === Wordclouds y logs ===
+logs/
+models/
+data/wordclouds/
+
+# === PyTorch/Transformers warnings ===
+*.log
+
+# === VSCode y Jupyter ===
+.vscode/
+.ipynb_checkpoints/
+
+# === Archivos del sistema operativo ===
+.DS_Store
+*.swp
+
+codigo_antiguo_V1/

@@ -1,0 +1,13 @@
+pandas
+numpy
+tqdm
+nltk
+scikit-learn
+transformers
+torch
+joblib
+matplotlib
+wordcloud
+python-dotenv
+pytest
+markdown

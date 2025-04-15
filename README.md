@@ -1,20 +1,120 @@
-# FK01-Encuestas
+# 📊 FK01-Encuestas – Aprobación Presidencial en Chile vía Twitter
 
-## 📊 Análisis de Tweets y Sentimiento sobre Boric
+Este proyecto predice la aprobación presidencial de Gabriel Boric a partir de tweets en español, utilizando scraping, análisis de sentimiento, embeddings, feature engineering y modelos de machine learning (XGBoost). Automatizado diariamente con `cron` y reportes por correo.
 
-Este proyecto tiene como objetivo la recolección, procesamiento y análisis de tweets relacionados con Boric. Se incluyen modelos de procesamiento de lenguaje natural (NLP) para el análisis de sentimiento, tendencias y patrones en los datos.
+## 🧠 Tecnologías utilizadas
 
----
+- Python 3.10  
+- pandas, scikit-learn, joblib, transformers, torch, nltk  
+- pysentimiento/robertuito para sentimiento y embeddings  
+- pytest para testing automatizado  
+- cron para ejecución diaria  
+- streamlit, wordcloud, matplotlib, markdown, dotenv  
+- SMTP (Gmail) para envío de reportes  
 
-### 📁 Estructura del Proyecto
+## 📁 Estructura del proyecto
 
-FK01-ENCUESTAS/ │── data/ # Archivos de datos procesados y sin procesar │ ├── raw_data.csv # Tweets sin procesar │ ├── processed_data.csv # Tweets limpios │ ├── sentiment_data.csv # Tweets con análisis de sentimiento │ ├── sentiment_boric_tweets.csv # Tweets analizados en sentimiento │ │── notebooks/ # Jupyter Notebooks para análisis │ ├── Processed Data Analysis.ipynb │ │── src/ # Código fuente │ │── api/ │ │ ├── api_twitter.py # Conexión con la API de Twitter │ │ ├── apify_raw_data_collection.py # Recolector de tweets con Apify │ │ │ │── data_collection/ # Scripts de recolección de datos │ │── feature_engineering/ # Ingeniería de características │ │── model_evaluation/ # Evaluación de modelos │ │── model_training/ # Entrenamiento de modelos │ │── preprocessing/ # Preprocesamiento de datos │ │ ├── preprocess_data.py # Limpieza de tweets │ │ │ │── sentiment_analysis/ # Análisis de sentimiento │ │ ├── sentiment.py # Modelo de sentimiento │ │── README.md # Este archivo
+```
+FK01-Encuestas/
+├── app/                 → Archivos estáticos (logo, assets)
+├── data/                → CSVs y archivos de datos (no versionados)
+├── logs/                → Archivos de log diarios
+├── models/              → Modelos y escaladores entrenados
+├── src/                 → Código fuente principal
+│   ├── scraping.py
+│   ├── preprocessing.py
+│   ├── features.py
+│   ├── predict.py
+│   ├── metricas.py
+│   ├── utils.py
+│   ├── logger.py
+│   └── main.py
+├── tests/               → Tests unitarios con pytest
+├── .env.template        → Variables de entorno (plantilla)
+├── .gitignore
+├── README.md
+├── requirements.txt
+└── setup.sh             → Script de instalación automática
+```
 
----
+## ⚙️ Instalación rápida
 
-## ⚙️ Instalación y Dependencias
-
-### **1️⃣ Clonar el repositorio**
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd FK01-ENCUESTAS
+git clone https://github.com/tu_usuario/FK01-Encuestas.git
+cd FK01-Encuestas
+bash setup.sh
+cp .env.template .env     # Editar con tus credenciales reales
+source .venv/bin/activate
+```
+
+## 🔐 Configura el archivo `.env`
+
+```env
+APIFY_API_KEY=tu_api_key_de_apify
+EMAIL_REMITENTE=correo@gmail.com
+EMAIL_CLAVE_APP=clave_app_generada_en_gmail
+```
+
+## 🚀 Ejecución del pipeline
+
+```bash
+python src/main.py
+```
+
+Este script:
+1. Ejecuta tests con `pytest`  
+2. Hace scraping de tweets del día  
+3. Limpia y analiza sentimientos  
+4. Genera embeddings  
+5. Calcula features diarios y agrega aprobación CADEM  
+6. Predice aprobación usando XGBoost  
+7. Genera wordclouds e índice de negatividad  
+8. Envía un resumen por correo en HTML profesional  
+
+## 🧪 Correr tests
+
+```bash
+pytest tests/ -v
+```
+
+## 📬 Resumen Diario
+
+Cada día se genera un resumen Markdown + HTML que se envía por correo con:
+
+- Resultados de tests  
+- Aprobación presidencial estimada y variación  
+- Índice de negatividad (barra roja)  
+- % de tweets negativos (barra naranja)  
+- Wordcloud del día  
+- Logo institucional  
+
+## ⏱ Automatización vía Cron
+
+Para ejecutar automáticamente todos los días a medianoche:
+
+```bash
+crontab -e
+```
+
+Y agrega:
+
+```cron
+0 0 * * * cd /ruta/a/FK01-Encuestas && /ruta/a/python src/main.py >> logs/cron_main.log 2>&1
+```
+
+## 🧹 Buenas prácticas
+
+- No subas `.env` ni `data/` al repo  
+- Usa `.env.template` como referencia para despliegue  
+- Usa `setup.sh` para instalar y preparar entorno  
+- Usa logs para debug y análisis de ejecución  
+- Corre `pytest` antes de cada push o cron  
+
+## 📌 Créditos
+
+Proyecto desarrollado por Cristian Rodríguez – FK Economics  
+Contacto: crodriguez@fkeconomics.com  
+
+## 📄 Licencia
+
+Uso interno y académico. No redistribuir sin autorización.
