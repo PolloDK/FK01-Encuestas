@@ -8,6 +8,7 @@ venv/
 
 # === Carpeta completa de datos ===
 data/
+!data/.gitkeep
 
 # (Opcional) Si quieres mantener algún archivo dentro de data/
 # !data/encuestas.csv
