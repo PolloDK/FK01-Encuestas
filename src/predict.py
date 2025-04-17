@@ -15,9 +15,9 @@ class Predictor:
 
         # === Aprobación ===
         self.model_aprob = self._load_model("modelo_xgb.pkl")
-        self.scaler_X_aprob = self._load_model("scaler_X.pkl")
-        self.scaler_y_aprob = self._load_model("scaler_y.pkl")
-        self.feature_names_aprob = self._load_model("feature_names.pkl")
+        #self.scaler_X_aprob = self._load_model("scaler_X.pkl")
+        #self.scaler_y_aprob = self._load_model("scaler_y.pkl")
+        #self.feature_names_aprob = self._load_model("feature_names.pkl")
 
         # === Desaprobación ===
         self.model_desaprob = self._load_model("modelo_xgb_desaprobacion.pkl")
@@ -48,29 +48,23 @@ class Predictor:
         resultados = pd.DataFrame()
 
         # === Predicción de aprobación ===
-        if self.model_aprob and self.scaler_X_aprob and self.scaler_y_aprob and self.feature_names_aprob:
-            df_aprob = df.copy()
+        if self.model_aprob:
             try:
-                columnas_excluir_aprob = [
-                    'week_start', 'aprobacion_boric', 'desaprobacion_boric',
-                    'disapproval_rolling_7d', 'disapproval_lag_7d',
-                    'disapproval_diff', 'disapproval_pct_change'
-                ]
-                df_aprob = df_aprob.drop(columns=columnas_excluir_aprob, errors='ignore')
-                #print(f"🔍 Variables disponibles para aprobación: {df_aprob.columns.tolist()}")
-                features_presentes_aprob = [f for f in self.feature_names_aprob if f in df_aprob.columns]
-                #print(f"✅ Usando variables para aprobación: {features_presentes_aprob}")
-                X_aprob = df_aprob[features_presentes_aprob]
-                X_aprob = self.scaler_X_aprob.transform(X_aprob)
-                y_aprob_scaled = self.model_aprob.predict(X_aprob)
-                y_aprob = self.scaler_y_aprob.inverse_transform(y_aprob_scaled.reshape(-1, 1)).flatten()
+                df_aprob = df.copy()
+                columnas_excluir = ['date', 'week_start', 'aprobacion_boric', 'desaprobacion_boric',
+                                    'disapproval_rolling_7d', 'disapproval_lag_7d',
+                                    'disapproval_diff', 'disapproval_pct_change']
+                df_aprob = df_aprob.drop(columns=columnas_excluir, errors='ignore')
 
-                df_aprob_result = df_aprob[["date"]].copy()
+                X_aprob = df_aprob.select_dtypes(include=[np.number])
+                y_aprob = self.model_aprob.predict(X_aprob)
+
+                df_aprob_result = df[["date"]].copy()
                 df_aprob_result["prediccion_aprobacion"] = y_aprob
                 resultados = df_aprob_result if resultados.empty else resultados.merge(df_aprob_result, on="date", how="outer")
                 logger.info(f"Predicciones de aprobación generadas: {len(y_aprob)}")
             except Exception as e:
-                logger.error(f"Error al generar predicción de aprobación: {e}")
+                logger.error(f"❌ Error al predecir aprobación: {e}")
 
         # === Predicción de desaprobación ===
         if self.model_desaprob and self.scaler_X_desaprob and self.scaler_y_desaprob and self.feature_names_desaprob:
