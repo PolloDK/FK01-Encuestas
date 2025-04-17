@@ -10,7 +10,7 @@ from scipy.special import softmax
 import torch
 import numpy as np
 from tqdm import tqdm
-from src.config import PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH
+from src.config import RAW_DATA_PATH, PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH
 from src.logger import get_logger
 logger = get_logger(__name__, "preprocessing.log")
 
@@ -39,6 +39,7 @@ class TweetPreprocessor:
         if pd.isna(text):
             return None
         
+        #text detection se puede activar si quieres filtrar idioma
         #try:
         #    if detect(text) != "es":
         #        return None
@@ -46,41 +47,52 @@ class TweetPreprocessor:
         #    return None
         
         text = text.lower()
-        text = re.sub(r"http\S+|www\S+|https\S+", "", text)
-        text = re.sub(r"@\S+", "", text)
-        text = re.sub(r"#\S+", "", text)
-        text = re.sub(r"[^a-záéíóúñü\s]", "", text)
+        text = re.sub(r"http\S+|www\S+|https\S+", "", text)     # quitar links
+        text = re.sub(r"@\w+", "", text)                        # quitar menciones
+        text = re.sub(r"[^\w\sáéíóúñü]", "", text)              # mantener palabras y acentos
         text = re.sub(r"\s+", " ", text).strip()
+
         words = text.split()
-        words = [word for word in words if word not in stopwords_final]
-        words = [lemmatizer.lemmatize(word) for word in words]
+        words = [w for w in words if w not in stopwords_final]
+        words = [lemmatizer.lemmatize(w) for w in words]
         if len(words) < 3 or len(words) > 50:
             return None
         return " ".join(words)
-
+    
     def analyze_sentiment(self, text):
         if not isinstance(text, str) or text.strip() == "":
             return "Neutral", 0.0, 0.0, 0.0, 0.0
         try:
             encoded = self.tokenizer(text, return_tensors='pt')
             output = self.sentiment_model(**encoded)
-            scores = softmax(output.logits.detach().numpy()[0])
+            logits = output.logits.detach().numpy()
+
+            if logits.shape[0] == 0:
+                raise ValueError("Output logits vacíos")
+
+            scores = softmax(logits[0])
             label_score = max(zip(["Negative", "Neutral", "Positive"], scores), key=lambda x: x[1])
             return label_score[0], label_score[1], scores[0], scores[1], scores[2]
-        except:
+        except Exception as e:
+            logger.warning(f"⚠️ Error en análisis de sentimiento: {e}")
             return "Neutral", 0.0, 0.0, 0.0, 0.0
-
+        
     def get_embedding(self, text):
         if isinstance(text, float) and pd.isna(text):
             return np.zeros(768)
-        inputs = self.embedding_tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=50)
-        with torch.no_grad():
-            outputs = self.embedding_model(**inputs)
-        return outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
-
+        try:
+            inputs = self.embedding_tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=50)
+            with torch.no_grad():
+                outputs = self.embedding_model(**inputs)
+            return outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
+        except Exception as e:
+            logger.warning(f"⚠️ Error generando embedding: {e}")
+            return np.zeros(768)
+    
     def run_pipeline(self):
         if not os.path.isfile(self.input_path):
-            logger.error(f"❌ No se encontró el archivo {self.input_path}.")
+            print(f"❌ No se encontró el archivo {self.input_path}.")
+            logger.error(f"No se encontró el archivo {self.input_path}.")
             return
 
         df_all = pd.read_csv(self.input_path, low_memory=False)
@@ -90,71 +102,92 @@ class TweetPreprocessor:
             df_all["processed"] = False
 
         df_nuevos = df_all[df_all["processed"] == False].copy()
-        total_nuevos = len(df_nuevos)
-
-        if total_nuevos == 0:
-            logger.info("⏭️ No hay nuevos tweets para procesar.")
+        if df_nuevos.empty:
+            print("⏭️ No hay nuevos tweets para procesar.")
+            logger.info("No hay nuevos tweets para procesar.")
             return
 
-        if total_nuevos < 500:
-            logger.info(f"⏭️ Solo hay {total_nuevos} tweets nuevos. Se requiere al menos 500 para procesar en batch.")
+        print(f"🔄 Procesando tweets ")
+
+        # === 1. Limpieza de texto ===
+        print(f"Comenzando limpieza de texto")
+        df_nuevos["text"] = df_nuevos["text"].astype(str).apply(self.clean_text)
+        df_nuevos = df_nuevos.dropna(subset=["text"])
+        if df_nuevos.empty:
+            print("⏭️ Todos los tweets fueron descartados tras limpieza.")
+            logger.info("Todos los tweets fueron descartados tras limpieza.")
             return
 
-        logger.info(f"📥 {total_nuevos} tweets nuevos encontrados. Iniciando procesamiento en batches...")
+        df_nuevos.to_csv(PREPROCESSED_PATH, index=False)
+        print(f"💾 Guardado texto limpio en: {PREPROCESSED_PATH}")
+        logger.info(f"💾 Texto limpio guardado en: {PREPROCESSED_PATH}")
 
-        CHUNK_SIZE = 5000
-        processed_chunks = []
+        # === 2. Análisis de sentimiento ===
+        print(f"Comenzando análisis de sentimiento de los tweets limpios")
+        tqdm.pandas(desc="🔍 Analizando sentimiento")
+        resultados = df_nuevos["text"].progress_apply(self.analyze_sentiment)
 
-        for i in range(0, total_nuevos, CHUNK_SIZE):
-            chunk = df_nuevos.iloc[i:i + CHUNK_SIZE].copy()
-            logger.info(f"🔄 Procesando tweets {i + 1} a {i + len(chunk)}")
+        df_sentiment = df_nuevos.copy()
+        df_sentiment[["sentiment_label", "score_label", "score_negative", "score_neutral", "score_positive"]] = pd.DataFrame(resultados.tolist(), index=df_nuevos.index)
 
-            chunk["text"] = chunk["text"].astype(str).apply(self.clean_text)
-            chunk = chunk.dropna(subset=["text"])
-            if chunk.empty:
-                logger.info(f"⏭️ Batch {i + 1} descartado por limpieza.")
-                continue
+        df_sentiment.to_csv(SENTIMENT_DATA_PATH, index=False)
+        print(f"💾 Guardado análisis de sentimiento en: {SENTIMENT_DATA_PATH}")
+        logger.info(f"💾 Sentimiento guardado en: {SENTIMENT_DATA_PATH}")
 
-            logger.info(f"🧼 {len(chunk)} tweets luego de limpieza.")
+        # === 3. Embeddings ===
+        print(f"Comenzando embedding de los tweets")
+        tqdm.pandas(desc="🔗 Generando embeddings")
+        embeddings_list = df_sentiment["text"].progress_apply(self.get_embedding).tolist()
+        robertuito_features = pd.DataFrame(embeddings_list, columns=[f"robertuito_{i}" for i in range(768)])
 
-            tqdm.pandas(desc="🔍 Analizando sentimiento")
-            resultados = chunk["text"].progress_apply(self.analyze_sentiment)
+        df_embedding = df_sentiment.reset_index(drop=True)
+        df_embedding_final = pd.concat([df_embedding, robertuito_features], axis=1)
+
+        df_embedding_final.to_csv(EMBEDDING_DATA_PATH, index=False)
+        print(f"💾 Embeddings guardados en: {EMBEDDING_DATA_PATH}")
+        logger.info(f"💾 Embeddings guardados en: {EMBEDDING_DATA_PATH}")
+
+        # === 4. Guardar todo en processed_data.csv
+        print(f"Guardando nuevos tweets en {PROCESSED_DATA_PATH}")
+        df_processed = df_embedding_final.copy()
+        df_processed["id"] = df_processed["id"].astype(str)
+
+        if os.path.exists(PROCESSED_DATA_PATH):
+            print(f"✅ Existe archivo en {PROCESSED_DATA_PATH}")
+            logger.info("✅ Existe archivo processed_data.csv")
 
             try:
-                chunk["sentiment_label"], chunk["score_label"], chunk["score_negative"], chunk["score_neutral"], chunk["score_positive"] = zip(*resultados)
-            except ValueError:
-                logger.warning(f"⚠️ Error desempaquetando resultados de sentimiento en batch {i + 1}.")
-                continue
+                # Leer sólo encabezado para obtener columnas
+                with open(PROCESSED_DATA_PATH, "r", encoding="utf-8") as f:
+                    first_line = f.readline().strip()
+                columnas_existentes = first_line.split(",")
+                
+                # Asegurar que columnas estén en el mismo orden
+                df_processed = df_processed[columnas_existentes]
 
-            tqdm.pandas(desc="🔗 Generando embeddings")
-            embeddings_list = chunk["text"].progress_apply(self.get_embedding).tolist()
-            robertuito_features = pd.DataFrame(embeddings_list, columns=[f"robertuito_{j}" for j in range(768)])
-            chunk = chunk.reset_index(drop=True)
-            df_chunk_processed = pd.concat([chunk, robertuito_features], axis=1)
+                # Guardar en modo append sin encabezado
+                df_processed.to_csv(PROCESSED_DATA_PATH, mode="a", header=False, index=False)
+                print(f"✅ Nuevos datos agregados a {PROCESSED_DATA_PATH}")
+                logger.info(f"✅ Nuevos datos agregados a {PROCESSED_DATA_PATH}")
+            except Exception as e:
+                print(f"⚠️ Error al guardar en {PROCESSED_DATA_PATH}: {e}")
+                logger.error(f"⚠️ Error al guardar en {PROCESSED_DATA_PATH}: {e}")
+        else:
+            df_processed.to_csv(PROCESSED_DATA_PATH, index=False)
+            print(f"📄 Archivo nuevo creado: {PROCESSED_DATA_PATH}")
+            logger.info(f"📄 Archivo nuevo creado: {PROCESSED_DATA_PATH}")
 
-            processed_chunks.append(df_chunk_processed)
-
-        if not processed_chunks:
-            logger.warning("⚠️ No se generaron chunks procesados.")
-            return
-
-        df_processed = pd.concat(processed_chunks, ignore_index=True)
-        logger.info(f"✅ Total tweets procesados exitosamente: {len(df_processed)}")
-
-        # === Guardar temporalmente
-        df_processed.to_csv(PREPROCESSED_PATH, index=False)
-        logger.info(f"💾 Texto limpio + sentimiento + embeddings guardado en: {PREPROCESSED_PATH}")
-
-        # === Merge con archivo existente si corresponde
-        if os.path.exists(PROCESSED_DATA_PATH):
-            df_existing = pd.read_csv(PROCESSED_DATA_PATH)
-            df_existing["createdAt"] = pd.to_datetime(df_existing["createdAt"])
-            df_processed = pd.concat([df_existing, df_processed], ignore_index=True).drop_duplicates(subset=["id"])
-
-        df_processed.to_csv(PROCESSED_DATA_PATH, index=False)
+        print(f"✅ Archivo final actualizado en: {PROCESSED_DATA_PATH}")
         logger.info(f"✅ Archivo final actualizado en: {PROCESSED_DATA_PATH}")
 
-        # === Marcar como procesados en el original y guardar
-        df_all.loc[df_all["id"].isin(df_processed["id"]), "processed"] = True
+        # === 5. Actualizar raw_data con flag "processed"
+        print(f"Actualizando flag 'processed'")
+        df_all.loc[df_all["id"].isin(df_nuevos["id"]), "processed"] = True
         df_all.to_csv(self.input_path, index=False)
+        print(f"Tweets clasificados como 'processed' en {self.input_path}")
         logger.info(f"📝 Flag 'processed' actualizado en {self.input_path}")
+
+
+#if __name__ == "__main__":
+#    preprocessor = TweetPreprocessor(input_path=RAW_DATA_PATH)
+#    preprocessor.run_pipeline()
