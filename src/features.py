@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+from sklearn.preprocessing import RobustScaler
 from src.logger import get_logger
 logger = get_logger(__name__, "features.log")
 
@@ -27,6 +28,7 @@ class FeatureEngineer:
 
         df["createdAt"] = pd.to_datetime(df["createdAt"])
         df["date"] = pd.to_datetime(df["createdAt"].dt.date)
+        #print("🕒 Fechas únicas en df:", df["date"].unique())
         df_encuestas["date"] = pd.to_datetime(df_encuestas["date"])
 
         if os.path.exists(self.output_path):
@@ -34,6 +36,7 @@ class FeatureEngineer:
             df_existing["date"] = pd.to_datetime(df_existing["date"])
             processed_dates = df_existing["date"].unique()
             df = df[~df["date"].isin(processed_dates)].copy()
+            #print("🧪 Fechas tras filtrar días ya procesados:", df["date"].unique())
             logger.info(f"{len(processed_dates)} días ya procesados. Se omiten.")
         else:
             df_existing = None
@@ -46,6 +49,10 @@ class FeatureEngineer:
 
         # === Cálculos ===
         try:
+            engagement_vars = ["retweetCount", "replyCount", "likeCount", "quoteCount"]
+            scaler = RobustScaler()
+            df[engagement_vars] = scaler.fit_transform(df[engagement_vars])
+
             df_daily = df.groupby("date", as_index=False).agg({
                 "score_positive": "mean",
                 "score_negative": "mean",
@@ -56,8 +63,8 @@ class FeatureEngineer:
                 "quoteCount": "mean",
                 **{f"robertuito_{i}": "mean" for i in range(768)}
             })
-
-            engagement_vars = ["retweetCount", "replyCount", "likeCount", "quoteCount"]
+            #print("📊 df_daily.shape:", df_daily.shape)
+            #print("📅 Fechas en df_daily:", df_daily["date"].unique())
             weighted_features = []
             for var in engagement_vars:
                 df_w = df.groupby("date").apply(lambda x: pd.Series({
@@ -78,14 +85,20 @@ class FeatureEngineer:
             df_daily["week_start"] = df_daily["date"] - pd.to_timedelta(df_daily["date"].dt.weekday, unit="D")
 
             df_final = df_daily.merge(df_encuestas[["week_start", "aprobacion_boric", "desaprobacion_boric"]], on="week_start", how="left")
+            #print("🧾 df_final.shape:", df_final.shape)
+            #print("📅 Fechas en df_final:", df_final["date"].unique())
+            #print("📊 NaNs en aprobación hoy:", df_final[df_final["date"] == pd.to_datetime("today").normalize()][["aprobacion_boric", "desaprobacion_boric"]])
+
             df_final = df_final.sort_values("date")
 
             if df_final.empty:
                 logger.warning("No se generaron features. DataFrame final vacío.")
                 return
 
-            if ("aprobacion_boric" not in df_final.columns or df_final["aprobacion_boric"].isna().all()) and \
-               ("desaprobacion_boric" not in df_final.columns or df_final["desaprobacion_boric"].isna().all()):
+            no_aprob = "aprobacion_boric" not in df_final.columns or df_final["aprobacion_boric"].isna().all()
+            no_desaprob = "desaprobacion_boric" not in df_final.columns or df_final["desaprobacion_boric"].isna().all()
+
+            if no_aprob and no_desaprob:
                 logger.warning("No hay datos de aprobación o desaprobación para los días procesados.")
                 return
 
@@ -112,9 +125,9 @@ class FeatureEngineer:
             if df_existing is not None:
                 df_final = pd.concat([df_existing, df_final], ignore_index=True).drop_duplicates(subset=["date"])
 
-            print("📊 df_final shape:", df_final.shape)
-            print("📅 Fechas únicas en df_final:", df_final["date"].nunique())
-            print("📁 Guardando en:", self.output_path)
+            #print("📊 df_final shape:", df_final.shape)
+            #print("📅 Fechas únicas en df_final:", df_final["date"].nunique())
+            #print("📁 Guardando en:", self.output_path)
             df_final.to_csv(self.output_path, index=False, encoding="utf-8")
             logger.info(f"Features guardados en: {self.output_path}")
             logger.info(f"Días nuevos procesados: {df['date'].nunique()}")

@@ -46,11 +46,11 @@ def calcular_metricas():
     try:
         print("Comenzando cálculo de % tweets negativos")
         df_raw = pd.read_csv(PROCESSED_DATA_PATH, parse_dates=["createdAt"])
-        print("Base cargada")
+        #print("Base cargada")
         df_raw = df_raw.dropna(subset=["score_positive", "score_negative", "score_neutral"])
-        print("se eliminó NaNs")
+        #print("se eliminó NaNs")
         df_raw["date_only"] = df_raw["createdAt"].dt.date
-        print(f"🔍 Filas restantes antes de clasificar: {len(df_raw)}")
+        #print(f"🔍 Filas restantes antes de clasificar: {len(df_raw)}")
         
         # Vectorizado sin .apply
         scores = df_raw[["score_positive", "score_negative", "score_neutral"]]
@@ -58,7 +58,7 @@ def calcular_metricas():
 
         empates = scores.eq(scores.max(axis=1), axis=0).sum(axis=1) > 1
         df_raw.loc[empates, "sentimiento_clasificado"] = "neutro"
-        print("✅ Clasificación vectorizada completada")
+        print("✅ Clasificación completada")
 
         conteos = df_raw.groupby("date_only")["sentimiento_clasificado"].value_counts().unstack(fill_value=0).reset_index()
         conteos.columns.name = None
@@ -125,7 +125,7 @@ def generar_wordcloud_para_fecha(target_date):
     text = " ".join(df_target["text"].dropna().astype(str))
     # 🔍 Lista de palabras o frases a eliminar (convertidas a minúsculas)
     frases_excluir = ["gabriel boric", "presidente boric"]
-    palabras_excluir = ["boric", "gabriel", "presidente", "chile"]
+    palabras_excluir = ["boric", "gabriel", "presidente", "chile", "gobierno"]
 
     # Eliminar frases primero
     for frase in frases_excluir:
