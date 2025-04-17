@@ -37,31 +37,73 @@ def show_home():
         df_pred_filtrado = df_pred[(df_pred["date"] >= pd.to_datetime(fecha_inicio)) & (df_pred["date"] <= pd.to_datetime(fecha_fin))]
         df_cadem_filtrado = df_cadem[(df_cadem["date"] >= pd.to_datetime(fecha_inicio)) & (df_cadem["date"] <= pd.to_datetime(fecha_fin))]
 
+        #Opciones disponibles
+        opciones_series = [
+            "Predicción Aprobación",
+            "CADEM Aprobación",
+            "Predicción Desaprobación",
+            "CADEM Desaprobación"
+        ]
+
+        # Selector
+        seleccionadas = st.multiselect(
+            "Selecciona las series a mostrar:",
+            opciones_series,
+            default=opciones_series  # todas seleccionadas por defecto
+        )
+
         # Gráfico
         fig = px.line()
-        fig.add_scatter(
-            x=df_pred_filtrado["date"],
-            y=df_pred_filtrado["prediccion_aprobacion"],
-            name="Predicción",
-            mode="lines+markers",
-            line=dict(color="royalblue", width=2),
-            marker=dict(size=5)
-        )
-        fig.add_scatter(
-            x=df_cadem_filtrado["date"],
-            y=df_cadem_filtrado["aprobacion_boric"],
-            name="CADEM",
-            mode="lines+markers",
-            line=dict(color="firebrick", dash="dash", width=2),
-            marker=dict(size=6)
-        )
+
+        if "Predicción Aprobación" in seleccionadas:
+            fig.add_scatter(
+                x=df_pred_filtrado["date"],
+                y=df_pred_filtrado["prediccion_aprobacion"],
+                name="Predicción Aprobación",
+                mode="lines+markers",
+                line=dict(color="royalblue", width=2),
+                marker=dict(size=5)
+            )
+
+        if "CADEM Aprobación" in seleccionadas:
+            fig.add_scatter(
+                x=df_cadem_filtrado["date"],
+                y=df_cadem_filtrado["aprobacion_boric"],
+                name="CADEM Aprobación",
+                mode="lines+markers",
+                line=dict(color="firebrick", dash="dash", width=2),
+                marker=dict(size=6)
+            )
+
+        if "Predicción Desaprobación" in seleccionadas:
+            fig.add_scatter(
+                x=df_pred_filtrado["date"],
+                y=df_pred_filtrado["prediccion_desaprobacion"],
+                name="Predicción Desaprobación",
+                mode="lines+markers",
+                line=dict(color="darkgreen", width=2),
+                marker=dict(size=5)
+            )
+
+        if "CADEM Desaprobación" in seleccionadas:
+            fig.add_scatter(
+                x=df_cadem_filtrado["date"],
+                y=df_cadem_filtrado["desaprobacion_boric"],
+                name="CADEM Desaprobación",
+                mode="lines+markers",
+                line=dict(color="orange", dash="dash", width=2),
+                marker=dict(size=6)
+            )
+
         fig.update_layout(
             xaxis_title="Fecha",
-            yaxis_title="Aprobación (0 a 1)",
+            yaxis_title="Porcentaje",
             hovermode="x unified",
             template="plotly_white",
-            legend_title_text="Fuente"
+            legend_title_text="Fuente",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
+
         st.plotly_chart(fig, use_container_width=True)
         
     st.markdown("---")

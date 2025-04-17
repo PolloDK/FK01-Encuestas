@@ -76,21 +76,28 @@ class FeatureEngineer:
 
             df_encuestas["week_start"] = df_encuestas["date"] - pd.to_timedelta(df_encuestas["date"].dt.weekday, unit="D")
             df_daily["week_start"] = df_daily["date"] - pd.to_timedelta(df_daily["date"].dt.weekday, unit="D")
-            df_final = df_daily.merge(df_encuestas[["week_start", "aprobacion_boric"]], on="week_start", how="left")
+
+            df_final = df_daily.merge(df_encuestas[["week_start", "aprobacion_boric", "desaprobacion_boric"]], on="week_start", how="left")
             df_final = df_final.sort_values("date")
 
             if df_final.empty:
                 logger.warning("No se generaron features. DataFrame final vacío.")
                 return
 
-            if "aprobacion_boric" not in df_final.columns or df_final["aprobacion_boric"].isna().all():
-                logger.warning("No hay datos de aprobación para los días procesados.")
+            if ("aprobacion_boric" not in df_final.columns or df_final["aprobacion_boric"].isna().all()) and \
+               ("desaprobacion_boric" not in df_final.columns or df_final["desaprobacion_boric"].isna().all()):
+                logger.warning("No hay datos de aprobación o desaprobación para los días procesados.")
                 return
 
             df_final["approval_rolling_7d"] = df_final["aprobacion_boric"].rolling(window=7, min_periods=1).mean()
             df_final["approval_lag_7d"] = df_final["aprobacion_boric"].shift(7)
             df_final["approval_diff"] = df_final["aprobacion_boric"].diff()
             df_final["approval_pct_change"] = df_final["aprobacion_boric"].pct_change()
+
+            df_final["disapproval_rolling_7d"] = df_final["desaprobacion_boric"].rolling(window=7, min_periods=1).mean()
+            df_final["disapproval_lag_7d"] = df_final["desaprobacion_boric"].shift(7)
+            df_final["disapproval_diff"] = df_final["desaprobacion_boric"].diff()
+            df_final["disapproval_pct_change"] = df_final["desaprobacion_boric"].pct_change()
 
             for lag in range(1, 8):
                 df_final[f"score_positive_lag_{lag}"] = df_final["score_positive"].shift(lag)
@@ -105,9 +112,20 @@ class FeatureEngineer:
             if df_existing is not None:
                 df_final = pd.concat([df_existing, df_final], ignore_index=True).drop_duplicates(subset=["date"])
 
+            print("📊 df_final shape:", df_final.shape)
+            print("📅 Fechas únicas en df_final:", df_final["date"].nunique())
+            print("📁 Guardando en:", self.output_path)
             df_final.to_csv(self.output_path, index=False, encoding="utf-8")
             logger.info(f"Features guardados en: {self.output_path}")
             logger.info(f"Días nuevos procesados: {df['date'].nunique()}")
 
         except Exception as e:
             logger.error(f"Error durante feature engineering: {e}")
+
+if __name__ == "__main__":
+    input_path = "data/processed_data.csv"
+    encuestas_path = "data/encuestas.csv"
+    output_path = "data/features_dataset.csv"
+
+    engineer = FeatureEngineer(input_path, encuestas_path, output_path)
+    engineer.run()

@@ -29,12 +29,11 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 def main():
-    print("🔍 Ejecutando tests antes de iniciar el flujo...")
-
     # Crear carpeta de logs si no existe
     os.makedirs("logs", exist_ok=True)
     log_path = "logs/tests.log"
 
+    print("🔍 Ejecutando tests antes de iniciar el flujo...")
     # Ejecutar pytest en modo silencioso y guardar salida
     result = subprocess.run(
         ["pytest", str(BASE_DIR / "tests"), "--disable-warnings", "-q"],
@@ -65,7 +64,7 @@ def main():
 
     # Scraping
     scraper = TweetScraper()
-    scraper.scrapear_tweets_del_dia()
+    scraper.scrapear_tweets_pendientes()
     print("✅ Scraping finalizado.")
 
     # Preprocesamiento + Sentimiento + Embeddings
@@ -74,6 +73,7 @@ def main():
     print("✅ Preprocesamiento completado.")
 
     # Feature Engineering
+    print(f"Comenzando con feature engineering")
     engineer = FeatureEngineer(
         input_path=PROCESSED_DATA_PATH,
         encuestas_path=ENCUESTAS_PATH,
@@ -101,19 +101,23 @@ def main():
     # print("✅ Modelado completado.")
 
     # Predicción con el modelo entrenado
+    print(f"Comenzando predicción")
     predictor = Predictor()
     if not os.path.exists(FEATURES_DATASET_PATH):
         print(f"⚠️ No se encontró el archivo {FEATURES_DATASET_PATH}. Se omite la predicción.")
         return
-    predicciones = predictor.predict_latest()
+    predicciones = predictor.predict()
     predicciones.to_csv(PREDICTIONS_PATH, index=False)
     print(f"✅ Predicción generada y guardada en {PREDICTIONS_PATH}")
 
     # Cálculo de Métricas
+    print(f"Comenzamos el cálculo de métricas")
     calcular_metricas()
+    print(f"Comenzamos el armado de la wordcloud")
     generar_wordcloud_diario()
     
     # === Generar y enviar resumen diario ===
+    print("Generando resumen diario...")
     resumen = generar_resumen_diario()
     enviar_resumen_por_email(contenido_md=resumen)
     

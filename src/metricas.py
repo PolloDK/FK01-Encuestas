@@ -44,10 +44,21 @@ def calcular_metricas():
         return
 
     try:
+        print("Comenzando cálculo de % tweets negativos")
         df_raw = pd.read_csv(PROCESSED_DATA_PATH, parse_dates=["createdAt"])
+        print("Base cargada")
         df_raw = df_raw.dropna(subset=["score_positive", "score_negative", "score_neutral"])
+        print("se eliminó NaNs")
         df_raw["date_only"] = df_raw["createdAt"].dt.date
-        df_raw["sentimiento_clasificado"] = df_raw.apply(clasificar_sentimiento, axis=1)
+        print(f"🔍 Filas restantes antes de clasificar: {len(df_raw)}")
+        
+        # Vectorizado sin .apply
+        scores = df_raw[["score_positive", "score_negative", "score_neutral"]]
+        df_raw["sentimiento_clasificado"] = scores.idxmax(axis=1).str.replace("score_", "")
+
+        empates = scores.eq(scores.max(axis=1), axis=0).sum(axis=1) > 1
+        df_raw.loc[empates, "sentimiento_clasificado"] = "neutro"
+        print("✅ Clasificación vectorizada completada")
 
         conteos = df_raw.groupby("date_only")["sentimiento_clasificado"].value_counts().unstack(fill_value=0).reset_index()
         conteos.columns.name = None
@@ -129,9 +140,9 @@ def generar_wordclouds_historicos():
 
 
 def main():
-    #calcular_metricas()
-    #generar_wordcloud_diario()
-    generar_wordclouds_historicos()  # Ejecuta solo si quieres correr todos
+    calcular_metricas()
+    generar_wordcloud_diario()
+    #generar_wordclouds_historicos()  # Ejecuta solo si quieres correr todos
 
 if __name__ == "__main__":
     main()

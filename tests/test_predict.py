@@ -33,7 +33,7 @@ def test_predict_latest_funciona(mock_read_csv, mock_joblib_load, mock_exists):
     mock_read_csv.return_value = df_mock
 
     predictor = Predictor()
-    resultado = predictor.predict_latest()
+    resultado = predictor.predict()
 
     assert not resultado.empty
     assert "prediccion_aprobacion" in resultado.columns
