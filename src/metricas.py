@@ -62,21 +62,38 @@ def calcular_metricas():
 
         conteos = df_raw.groupby("date_only")["sentimiento_clasificado"].value_counts().unstack(fill_value=0).reset_index()
         conteos.columns.name = None
+
+        # Asegurar que todas las clases estén presentes
+        for col in ["positive", "negative", "neutral"]:
+            if col not in conteos.columns:
+                conteos[col] = 0
+
         conteos = conteos.rename(columns={
-            "date_only": "date",
-            "negativo": "tweets_negativos",
-            "positivo": "tweets_positivos",
-            "neutro": "tweets_neutros"
+            "positive": "tweets_positivos",
+            "negative": "tweets_negativos",
+            "neutral": "tweets_neutros"
         })
+        conteos = conteos.rename(columns={"date_only": "date"})
+        conteos = conteos.drop(columns=["neutro"], errors="ignore")
+
         conteos["total_tweets"] = conteos[["tweets_negativos", "tweets_positivos", "tweets_neutros"]].sum(axis=1)
         conteos["porcentaje_tweets_negativos"] = conteos["tweets_negativos"] / conteos["total_tweets"]
         conteos["date"] = pd.to_datetime(conteos["date"])
         logger.info("Porcentaje de tweets negativos calculado.")
+        #print("🧪 Conteos (últimas filas):")
+        #print(conteos.tail())
+        #print("📊 Columnas finales:", conteos.columns.tolist())
     except Exception as e:
         logger.error(f"Error en cálculo de % tweets negativos: {e}")
         return
 
     try:
+        #print("📅 Fechas predicción:", df_pred["date"].tail())
+        #print("📅 Fechas métricas:", df_metricas["date"].tail())
+        #print("📊 Columnas métricas:", df_metricas.columns.tolist())
+        #df_pred["date"] = pd.to_datetime(df_pred["date"]).dt.normalize()
+        #conteos["date"] = pd.to_datetime(conteos["date"]).dt.normalize()
+        #negatividad_por_dia["date"] = pd.to_datetime(negatividad_por_dia["date"]).dt.normalize()
         df_metricas = pd.merge(negatividad_por_dia, conteos, on="date", how="outer")
         df_actualizado = pd.merge(df_pred, df_metricas, on="date", how="left")
         df_actualizado.to_csv(PREDICTIONS_PATH, index=False, date_format="%Y-%m-%d")
