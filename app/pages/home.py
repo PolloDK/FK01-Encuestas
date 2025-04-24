@@ -37,6 +37,10 @@ def show_home():
         df_pred_filtrado = df_pred[(df_pred["date"] >= pd.to_datetime(fecha_inicio)) & (df_pred["date"] <= pd.to_datetime(fecha_fin))]
         df_cadem_filtrado = df_cadem[(df_cadem["date"] >= pd.to_datetime(fecha_inicio)) & (df_cadem["date"] <= pd.to_datetime(fecha_fin))]
 
+        # Fecha de predicción:
+        df_pred_filtrado = df_pred_filtrado[df_pred_filtrado["date"] >= "2024-08-09"]
+        df_cadem_filtrado = df_cadem_filtrado[df_cadem_filtrado["date"] >= "2024-08-09"]
+
         #Opciones disponibles
         opciones_series = [
             "Predicción Aprobación",

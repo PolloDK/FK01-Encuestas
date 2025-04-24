@@ -16,28 +16,31 @@ class FeatureEngineer:
 
     def run(self):
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+        #print("Inicio de feature engineering")
         logger.info("Inicio de feature engineering")
 
         try:
             df = pd.read_csv(self.input_path)
             df_encuestas = pd.read_csv(self.encuestas_path)
+            #print(df_encuestas.head())
             logger.info(f"Archivos cargados: {self.input_path}, {self.encuestas_path}")
         except Exception as e:
             logger.error(f"Error al cargar archivos: {e}")
             return
 
         df["createdAt"] = pd.to_datetime(df["createdAt"])
-        df["date"] = pd.to_datetime(df["createdAt"].dt.date)
-        #print("🕒 Fechas únicas en df:", df["date"].unique())
+        df["date"] = df["createdAt"].dt.floor("D")
         df_encuestas["date"] = pd.to_datetime(df_encuestas["date"])
+        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+        df_encuestas["date"] = pd.to_datetime(df_encuestas["date"]).dt.tz_localize(None)
+        #print(df.head(), df_encuestas.head())
 
         if os.path.exists(self.output_path):
             df_existing = pd.read_csv(self.output_path)
             df_existing["date"] = pd.to_datetime(df_existing["date"])
-            processed_dates = df_existing["date"].unique()
-            df = df[~df["date"].isin(processed_dates)].copy()
-            #print("🧪 Fechas tras filtrar días ya procesados:", df["date"].unique())
-            logger.info(f"{len(processed_dates)} días ya procesados. Se omiten.")
+            df["date"] = pd.to_datetime(df["date"])
+            fechas_nuevas = df["date"].unique()
+            df_existing = df_existing[~df_existing["date"].isin(fechas_nuevas)]
         else:
             df_existing = None
 
@@ -47,7 +50,6 @@ class FeatureEngineer:
 
         logger.info(f"Procesando {df['date'].nunique()} días nuevos.")
 
-        # === Cálculos ===
         try:
             engagement_vars = ["retweetCount", "replyCount", "likeCount", "quoteCount"]
             scaler = RobustScaler()
@@ -63,10 +65,9 @@ class FeatureEngineer:
                 "quoteCount": "mean",
                 **{f"robertuito_{i}": "mean" for i in range(768)}
             })
-            #print("📊 df_daily.shape:", df_daily.shape)
-            #print("📅 Fechas en df_daily:", df_daily["date"].unique())
+
             weighted_features = []
-            for var in engagement_vars:
+            for var in ["retweetCount", "replyCount", "likeCount", "quoteCount"]:
                 df_w = df.groupby("date").apply(lambda x: pd.Series({
                     f"weighted_positive_{var}": self.weighted_avg(x["score_positive"], x[var]),
                     f"weighted_negative_{var}": self.weighted_avg(x["score_negative"], x[var]),
@@ -79,15 +80,15 @@ class FeatureEngineer:
                 df_weighted_all = df_weighted_all.merge(df_w, on="date", how="left")
 
             df_daily = df_daily.merge(df_weighted_all, on="date", how="left")
-            df_daily = df_daily.set_index("date").resample("D").ffill().reset_index()
 
-            df_encuestas["week_start"] = df_encuestas["date"] - pd.to_timedelta(df_encuestas["date"].dt.weekday, unit="D")
+            # Asignar encuesta del domingo a semana siguiente (lunes a domingo)
+            df_encuestas["week_start"] = df_encuestas["date"] + pd.to_timedelta(1, unit="D")
             df_daily["week_start"] = df_daily["date"] - pd.to_timedelta(df_daily["date"].dt.weekday, unit="D")
 
-            df_final = df_daily.merge(df_encuestas[["week_start", "aprobacion_boric", "desaprobacion_boric"]], on="week_start", how="left")
-            #print("🧾 df_final.shape:", df_final.shape)
-            #print("📅 Fechas en df_final:", df_final["date"].unique())
-            #print("📊 NaNs en aprobación hoy:", df_final[df_final["date"] == pd.to_datetime("today").normalize()][["aprobacion_boric", "desaprobacion_boric"]])
+            df_final = df_daily.merge(
+                df_encuestas[["week_start", "aprobacion_boric", "desaprobacion_boric"]],
+                on="week_start", how="left"
+            )
 
             df_final = df_final.sort_values("date")
 
@@ -102,32 +103,36 @@ class FeatureEngineer:
                 logger.warning("No hay datos de aprobación o desaprobación para los días procesados.")
                 return
 
-            df_final["approval_rolling_7d"] = df_final["aprobacion_boric"].rolling(window=7, min_periods=1).mean()
+            df_final["approval_rolling_7d"] = df_final["aprobacion_boric"].shift(1).rolling(window=7, min_periods=7).mean()
             df_final["approval_lag_7d"] = df_final["aprobacion_boric"].shift(7)
-            df_final["approval_diff"] = df_final["aprobacion_boric"].diff()
-            df_final["approval_pct_change"] = df_final["aprobacion_boric"].pct_change()
+            df_final["approval_lag_14d"] = df_final["aprobacion_boric"].shift(14)
+            df_final["approval_diff"] = df_final["aprobacion_boric"].diff().shift(1)
+            df_final["approval_pct_change"] = df_final["aprobacion_boric"].pct_change().shift(1)
 
-            df_final["disapproval_rolling_7d"] = df_final["desaprobacion_boric"].rolling(window=7, min_periods=1).mean()
+            df_final["disapproval_rolling_7d"] = df_final["desaprobacion_boric"].shift(1).rolling(window=7, min_periods=7).mean()
             df_final["disapproval_lag_7d"] = df_final["desaprobacion_boric"].shift(7)
-            df_final["disapproval_diff"] = df_final["desaprobacion_boric"].diff()
-            df_final["disapproval_pct_change"] = df_final["desaprobacion_boric"].pct_change()
+            df_final["disapproval_lag_14d"] = df_final["desaprobacion_boric"].shift(14)
+            df_final["disapproval_diff"] = df_final["desaprobacion_boric"].diff().shift(1)
+            df_final["disapproval_pct_change"] = df_final["desaprobacion_boric"].pct_change().shift(1)
 
             for lag in range(1, 8):
                 df_final[f"score_positive_lag_{lag}"] = df_final["score_positive"].shift(lag)
                 df_final[f"score_negative_lag_{lag}"] = df_final["score_negative"].shift(lag)
                 df_final[f"score_neutral_lag_{lag}"] = df_final["score_neutral"].shift(lag)
 
-            df_final["score_negative_rolling7"] = df_final["score_negative"].rolling(window=7, min_periods=3).mean()
+            df_final["score_negative_rolling7"] = df_final["score_negative"].rolling(window=7, min_periods=7).mean()
             df_final["score_negative_rolling3"] = df_final["score_negative"].rolling(window=3, min_periods=3).mean()
             df_final["sentiment_net"] = df_final["score_positive"] - df_final["score_negative"]
-            df_final["sentiment_net_rolling7"] = df_final["sentiment_net"].rolling(window=7, min_periods=3).mean()
+            df_final["sentiment_net_rolling3"] = df_final["sentiment_net"].rolling(window=3, min_periods=3).mean()
+            df_final["sentiment_net_rolling7"] = df_final["sentiment_net"].rolling(window=7, min_periods=7).mean()
+            df_final["sentiment_net_rolling14"] = df_final["sentiment_net"].rolling(window=14, min_periods=14).mean()
+            df_final["sentiment_net_change"] = df_final["sentiment_net"] - df_final["sentiment_net"].shift(1)
+            
+            df_final["date"] = pd.to_datetime(df_final["date"]).dt.date
 
             if df_existing is not None:
                 df_final = pd.concat([df_existing, df_final], ignore_index=True).drop_duplicates(subset=["date"])
 
-            #print("📊 df_final shape:", df_final.shape)
-            #print("📅 Fechas únicas en df_final:", df_final["date"].nunique())
-            #print("📁 Guardando en:", self.output_path)
             df_final.to_csv(self.output_path, index=False, encoding="utf-8")
             logger.info(f"Features guardados en: {self.output_path}")
             logger.info(f"Días nuevos procesados: {df['date'].nunique()}")
