@@ -19,7 +19,7 @@ transformers==4.36.1
 
 # Modelos
 xgboost==1.6.2
-torch==2.0.0  # ✅ Versión más liviana compatible
+torch>=2.1.2,<2.2 # ✅ Versión más liviana compatible
 
 # Web scraping (por si usas scraping de tweets o Apify)
 apify-client==1.9.2
