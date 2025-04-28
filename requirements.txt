@@ -1,24 +1,35 @@
-apify-client==1.9.2
-langdetect==1.0.9
-joblib==1.1.1
-markdown==3.4.1
-matplotlib==3.5.3
-nltk==3.9.1
-numpy==1.25.2
-pandas==1.4.4
+# Básicos
 python-dotenv==0.20.0
-pysentimiento==0.7.3
+pandas==1.4.4
+numpy==1.25.2
 scikit-learn==1.3.2
-scipy==1.9.3
+joblib==1.1.1
+
+# Visualización
+matplotlib==3.5.3
 seaborn==0.11.2
-spacy==3.8.4
+wordcloud==1.9.4
+
+# Preprocesamiento y NLP
+nltk==3.9.1
+langdetect==1.0.9
+pysentimiento==0.7.3
+vaderSentiment==3.3.2
+transformers==4.36.1
+
+# Modelos
+xgboost==1.6.2
+torch==2.0.1  # ✅ Versión más liviana compatible
+
+# Web scraping (por si usas scraping de tweets o Apify)
+apify-client==1.9.2
+
+# Markdown para emails y reportes
+markdown==3.4.1
+
+# Streamlit y extensión de navbar
 streamlit==1.43.2
 streamlit-community-navigation-bar==4.7.7
-torch==2.6.0
-torchaudio==2.6.0
-torchvision==0.21.0
-transformers==4.36.1
+
+# Utilidades
 tqdm==4.64.1
-vaderSentiment==3.3.2
-wordcloud==1.9.4
-xgboost==1.6.2
