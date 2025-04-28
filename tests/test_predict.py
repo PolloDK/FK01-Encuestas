@@ -47,24 +47,24 @@ def test_predict_latest_funciona(mock_read_csv, mock_joblib_load, mock_exists):
     assert "prediccion_aprobacion" in resultado.columns
     assert resultado.shape[0] == 2  # ✅ validación directa
     
-def test_no_predicciones_despues_de_ultima_aprobacion():
+def test_predicciones_solo_con_features_completos():
     predictor = Predictor()
     resultados = predictor.predict()
 
-    # Cargar los features con los datos de aprobación reales
     df_features = pd.read_csv(predictor.features_path)
     df_features["date"] = pd.to_datetime(df_features["date"])
-    if resultados.empty or "date" not in resultados.columns:
-        assert True, "✅ No se generaron predicciones como se esperaba."
+
+    if resultados.empty:
+        assert True, "✅ No se generaron predicciones porque no había features."
         return
 
-    # Última fecha donde hay dato real de aprobación
-    ultima_fecha_real = df_features[df_features["aprobacion_boric"].notna()]["date"].max()
+    # Fechas en las que había features no nulos
+    fechas_features_validos = df_features.dropna(subset=predictor.aprobacion_bundle["feature_names"])["date"]
 
-    # Fechas en las que se generaron predicciones
+    # Fechas predichas
     fechas_predichas = resultados["date"]
 
-    # Validar que no haya ninguna predicción más allá de la última fecha válida
-    assert all(fechas_predichas <= ultima_fecha_real), (
-        f"❌ Se encontraron predicciones con fecha posterior a la última fecha de aprobación real: {ultima_fecha_real}"
+    # Asegurar que solo se predice para fechas donde había features válidos
+    assert all(fechas_predichas.isin(fechas_features_validos)), (
+        "❌ Se generaron predicciones para días donde no había features completos."
     )

@@ -21,12 +21,12 @@ class Predictor:
 
         # === Desaprobación ===
         self.desaprobacion_bundle = self._load_model("modelo_desaprobacion.pkl")
-        print("📂 Modelo de desaprobación cargado desde:", self.model_dir / "modelo_desaprobacion.pkl")
-        print("🔍 Feature names:", self.desaprobacion_bundle["feature_names"])
+        #print("📂 Modelo de desaprobación cargado desde:", self.model_dir / "modelo_desaprobacion.pkl")
+        #print("🔍 Feature names:", self.desaprobacion_bundle["feature_names"])
 
     def _load_model(self, filename):
         path = self.model_dir / filename
-        print("🔍 Ruta completa:", path)
+        #print("🔍 Ruta completa:", path)
 
         if not path.exists():
             logger.warning(f"⚠️ No se encontró el archivo: {path}")
@@ -99,7 +99,7 @@ class Predictor:
                     scaler_y.inverse_transform(y_aprob_scaled.reshape(-1, 1)).flatten()
                     if scaler_y else y_aprob_scaled
                 )
-
+                
                 # Guardar resultados
                 df_aprob_result = df_aprob[["date"]].copy()
                 df_aprob_result["prediccion_aprobacion"] = y_aprob
@@ -136,8 +136,7 @@ class Predictor:
 
                 X_desaprob_raw = df_desaprob[feature_names]
                 logger.info(f"🔍 Filas antes de filtrar NaNs (desaprobación): {X_desaprob_raw.shape[0]}")
-                mask_notna = X_desaprob_raw.notna().all(axis=1)
-                X_desaprob_raw = X_desaprob_raw[mask_notna]
+                X_desaprob_raw = X_desaprob_raw.dropna()
                 df_desaprob = df_desaprob.loc[X_desaprob_raw.index].copy()
                 logger.info(f"🧹 Filas después de filtrar NaNs (desaprobación): {X_desaprob_raw.shape[0]}")
 
@@ -159,7 +158,14 @@ class Predictor:
                     scaler_y.inverse_transform(y_desaprob_scaled.reshape(-1, 1)).flatten()
                     if scaler_y else y_desaprob_scaled
                 )
-
+                #print("🔍 scaler_y center_:", getattr(scaler_y, "center_", "N/A"))
+                #print("🔍 scaler_y scale_:", getattr(scaler_y, "scale_", "N/A"))
+                #print("🔍 y_desaprob_scaled (sample):", y_desaprob_scaled[:5])
+                #print("🔍 y_desaprob inverso (sample):", y_desaprob[:5])
+                #print("🔁 Predicciones desaprobación (últimos 5):", y_desaprob[-5:])
+                #print("📅 Fechas predichas:", df_desaprob["date"].tail().tolist())
+                #print("🎯 Escala predicha (antes de inversa):", y_desaprob_scaled[:5])
+                #print("🎯 Escala final (después de inversa):", y_desaprob[:5])
                 df_desaprob_result = df_desaprob[["date"]].copy()
                 df_desaprob_result["prediccion_desaprobacion"] = y_desaprob
 
