@@ -2,54 +2,75 @@ import streamlit as st
 from streamlit_navigation_bar import st_navbar
 from pages import home, about
 import os
-    
+
+# --- Configuración general ---
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 
-# Páginas y funciones asociadas
+# --- Definición de páginas locales ---
 pages = {
     "Home": home.show_home,
-    "About": about.show_about
+    "About": about.show_about,
 }
 
-# Ruta del logo
+# --- Ruta del logo ---
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 logo_path = os.path.join(parent_dir, "assets", "logo_fk.png")
 
-# Estilos del navbar
+# --- Definir TODAS las páginas para el navbar ---
+pages_navbar = ["Home", "About", "Página web", "LinkedIn"]
+
+# --- Asociar URLs externas ---
+urls = {
+    "Página web": "https://www.tu-pagina-web.com",  # 👈 cambia por tu sitio real
+    "LinkedIn": "https://www.linkedin.com/in/tu-linkedin/"
+}
+
+# --- Estilos del navbar ---
 styles = {
     "nav": {
-        "background-color": "#e5e5e5",  # gris claro
-        "padding": "10px",
-        "justify-content": "flex-end",
+        "background-color": "#383838",
+        "display": "flex",
+        "justify-content": "flex-start",
+        "align-items": "center",
+        "gap": "1rem",
     },
     "img": {
-        "padding-right": "10px",
+        "padding-right": "14px",
     },
     "span": {
-        "color": "black",
-        "padding": "10px",
-        "font-weight": "bold",
+        "color": "white",
+        "padding": "14px",
+        "font-weight": "normal",
     },
     "active": {
-        "background-color": "#d0d0d0",
-        "color": "black",
+        "background-color": "white",
+        "color": "var(--text-color)",
+        "font-weight": "normal",
+        "padding": "14px",
     }
 }
 
-# Opciones del componente
+# --- Opciones ---
 options = {
     "show_menu": False,
-    "show_sidebar": False,
+    "show_sidebar": True,
 }
 
-# Renderizar barra de navegación
+# --- Navbar ---
 selected_page = st_navbar(
-    list(pages.keys())
+    pages=pages_navbar,
+    styles=styles,
+    options=options,
+    urls=urls,  # 👈 añadimos urls externas
 )
 
-# Llamar a la página correspondiente
-pages[selected_page]()
+# --- Mostrar contenido solo si es interno ---
+if selected_page in pages:
+    pages[selected_page]()
+else:
+    pass  # No hacer nada para Página Web o LinkedIn, porque son links externos
 
+# --- Sidebar ---
 with st.sidebar:
     st.image("app/assets/logo_fk.png", use_container_width=True)
     st.markdown("## FK01 - Aprobación Presidencial")

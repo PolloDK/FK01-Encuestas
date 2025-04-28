@@ -8,6 +8,7 @@ from PIL import Image
 @st.cache_data
 def cargar_datos():
     df_pred = pd.read_csv("data/predicciones_diarias.csv", parse_dates=["date"])
+    df_pred["prediccion_aprobacion"] = df_pred["prediccion_aprobacion"]
     df_cadem = pd.read_csv("data/encuestas.csv", parse_dates=["date"])
     return df_pred.sort_values("date"), df_cadem.sort_values("date")
 
