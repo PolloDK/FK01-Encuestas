@@ -152,12 +152,7 @@ def show_home():
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
-        st.plotly_chart(fig, use_container_width=True, config={
-            "scrollZoom": False,          
-            "doubleClick": False,        
-            "displayModeBar": False,     
-            "responsive": True          
-        })
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         
     st.markdown("---")
     
@@ -227,12 +222,7 @@ def show_home():
                 title=None
             ),
             template="simple_white")
-        st.plotly_chart(fig_neg, use_container_width=True, config={
-            "scrollZoom": False,          
-            "doubleClick": False,  
-            "displayModeBar": False,  
-            "responsive": True    
-        })
+        st.plotly_chart(fig_neg, use_container_width=True, config={"displayModeBar": False})
 
     # 🔻 % Tweets Negativos
     if "porcentaje_tweets_negativos" in df_dia.columns:
@@ -291,12 +281,7 @@ def show_home():
                     title=None
                 ),
                 template="simple_white")
-            st.plotly_chart(fig_pct, use_container_width=True, config={
-                "scrollZoom": False,
-                "doubleClick": False,    
-                "displayModeBar": False, 
-                "responsive": True   
-            })
+            st.plotly_chart(fig_pct, use_container_width=True, config={"displayModeBar": False})
 
     st.markdown("---")
 
