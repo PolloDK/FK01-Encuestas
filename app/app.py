@@ -9,7 +9,7 @@ st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 # --- Definición de páginas locales ---
 pages = {
     "Home": home.show_home,
-    "About": about.show_about,
+    "Proyecto": about.show_about,
 }
 
 # --- Ruta del logo ---
@@ -17,13 +17,88 @@ parent_dir = os.path.dirname(os.path.abspath(__file__))
 logo_path = os.path.join(parent_dir, "assets", "logo_fk.png")
 
 # --- Definir TODAS las páginas para el navbar ---
-pages_navbar = ["Home", "About", "Página web", "LinkedIn"]
+pages_navbar = ["Home", "Proyecto", "Web", "LinkedIn"]
 
 # --- Asociar URLs externas ---
 urls = {
-    "Página web": "https://www.tu-pagina-web.com",  # 👈 cambia por tu sitio real
-    "LinkedIn": "https://www.linkedin.com/in/tu-linkedin/"
+    "Web": "https://www.fkeconomics.com/",  # 👈 cambia por tu sitio real
+    "LinkedIn": "https://www.linkedin.com/company/fkeconomics"
 }
+
+st.markdown("""
+    <style>
+    /* Botones generales */
+    .stButton>button {
+        background-color: #2697e1;
+        color: white;
+        border: none;
+    }
+
+    /* Etiquetas de multiselect */
+    .stMultiSelect [data-baseweb="tag"] {
+        background-color: #2697e1 !important;
+        color: white !important;
+    }
+
+    /* Input de fecha */
+    .stDateInput input {
+        border-color: #2697e1 !important;
+    }
+
+    /* Slider */
+    .stSlider > div[data-baseweb="slider"] > div {
+        background-color: #2697e1 !important;
+    }
+
+    /* Día seleccionado en el calendario */
+    div[data-baseweb="datepicker"] button[aria-selected="true"] {
+        background-color: #2697e1 !important;
+        color: white !important;
+    }
+
+    /* Hover en días del calendario */
+    div[data-baseweb="datepicker"] button:hover {
+        background-color: #d1ecfa !important;
+        color: black !important;
+    }
+
+    /* Fecha actual en el calendario */
+    div[data-baseweb="datepicker"] button[aria-label*="Today"] {
+        border: 1px solid #2697e1 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <style>
+    /* Sidebar como overlay fijo */
+    [data-testid="stSidebar"] {
+        position: fixed !important;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 1001;
+        width: 22rem !important;
+        transition: all 0.3s ease-in-out;
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    /* Oculta el margen del contenido cuando el sidebar está presente */
+    [data-testid="stSidebar"] + div .block-container {
+        padding-left: 1rem !important;
+        transition: all 0.3s ease-in-out;
+        margin-left: 0 !important;
+    }
+
+    /* Ajuste para pantallas pequeñas */
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {
+            width: 80% !important;
+        }
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- Estilos del navbar ---
 styles = {
@@ -72,9 +147,10 @@ else:
 
 # --- Sidebar ---
 with st.sidebar:
-    st.image("app/assets/logo_fk.png", use_container_width=True)
+    st.image(logo_path, width=80)
     st.markdown("## FK01 - Aprobación Presidencial")
-    st.write("Proyecto de predicción de aprobación presidencial basado en ML.")
-    st.write("Última actualización: 2025-04-11")
+    st.write("Este proyecto tiene como objetivo predecir la aprobación presidencial de Gabriel Boric a partir del análisis de sentimiento de los tweets que lo mencionan diariamente.")
+    st.write("👉 Para más información, selecciona la pestaña **Proyecto** desde la barra de navegación.")
+    st.write("</u>Última actualización</u>: 29 de abril de 2025", unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown("Desarrollado por [Tu Nombre](https://github.com/PolloDK)")
+    st.markdown("Desarrollado por [Cristián Rodríguez](https://github.com/PolloDK) Economista y Data Analyst de FK Economics")

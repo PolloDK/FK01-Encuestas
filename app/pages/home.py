@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import os
-from datetime import datetime
+from datetime import datetime, date
 from PIL import Image
 
 @st.cache_data
@@ -42,20 +42,52 @@ def show_home():
         df_pred_filtrado = df_pred_filtrado[df_pred_filtrado["date"] >= "2024-08-09"]
         df_cadem_filtrado = df_cadem_filtrado[df_cadem_filtrado["date"] >= "2024-08-09"]
 
-        #Opciones disponibles
-        opciones_series = [
-            "Predicción Aprobación",
-            "CADEM Aprobación",
-            "Predicción Desaprobación",
-            "CADEM Desaprobación"
-        ]
+        st.markdown("""
+            <style>
+            /* Cambia el color del título del expander */
+            [data-testid="stExpander"] summary {
+                color: #2697e1 !important;
+                font-weight: 600;
+            }
 
-        # Selector
-        seleccionadas = st.multiselect(
-            "Selecciona las series a mostrar:",
-            opciones_series,
-            default=opciones_series  # todas seleccionadas por defecto
-        )
+            /* Ícono del checkbox */
+            [data-testid="stCheckbox"] svg {
+                stroke: white !important;
+                fill: #2697e1 !important;
+            }
+
+            /* Fondo del checkbox solamente */
+            [data-testid="stCheckbox"] .st-cj {
+                background-color: #2697e1 !important;
+                border: 1px solid #2697e1 !important;
+            }
+
+            /* Ícono del checkbox */
+            [data-testid="stCheckbox"] .st-cj svg {
+                color: white !important;
+            }
+            /* Aplica el estilo solo a la fecha seleccionada del calendario */
+            .stDateInput [data-baseweb="calendar"] div[aria-selected="true"] {
+                background-color: #2697e1 !important;
+                color: white !important;
+                border-radius: 50% !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+            
+        with st.expander("Selecciona las series a mostrar"):
+            pred_apr = st.checkbox("Predicción Aprobación", value=True)
+            cadem_apr = st.checkbox("CADEM Aprobación", value=True)
+            pred_des = st.checkbox("Predicción Desaprobación", value=True)
+            cadem_des = st.checkbox("CADEM Desaprobación", value=True)
+
+        # Luego armar la lista:
+        seleccionadas = []
+        if pred_apr: seleccionadas.append("Predicción Aprobación")
+        if cadem_apr: seleccionadas.append("CADEM Aprobación")
+        if pred_des: seleccionadas.append("Predicción Desaprobación")
+        if cadem_des: seleccionadas.append("CADEM Desaprobación")
 
         # Gráfico
         fig = px.line()
@@ -101,15 +133,26 @@ def show_home():
             )
 
         fig.update_layout(
-            xaxis_title="Fecha",
-            yaxis_title="Porcentaje",
+            dragmode=False,
+            xaxis=dict(
+                showticklabels=True,
+                showline=False,
+                showgrid=True,
+                title=None
+            ), 
+            yaxis=dict(
+                showticklabels=True,
+                showline=False,
+                showgrid=True,
+                title=None
+            ),
             hovermode="x unified",
             template="plotly_white",
             legend_title_text="Fuente",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
         
     st.markdown("---")
     
@@ -130,8 +173,24 @@ def show_home():
     col1, col2 = st.columns([1, 1])
     with col1:
         valor_neg = df_dia["indice_negatividad"].values[0]
+
+        # Valor del día anterior
+        fecha_dia_anterior = fecha_seleccionada - pd.Timedelta(days=1)
+        df_dia_anterior = df_pred[df_pred["date"].dt.date == fecha_dia_anterior]
+
+        if not df_dia_anterior.empty:
+            valor_anterior = df_dia_anterior["indice_negatividad"].values[0]
+            delta_neg = valor_neg - valor_anterior
+        else:
+            delta_neg = None
+
         st.markdown(f"##### Día: {fecha_seleccionada}")
-        st.metric("", value=f"{valor_neg:.2%}")
+        st.metric(
+            label="",
+            value=f"{valor_neg:.1%}",
+            delta=f"{delta_neg:+.1%}" if delta_neg is not None else "N/A",
+            delta_color="inverse"
+        )
         progreso_html = f"""
         <div style="background-color:#eee;border-radius:0.5rem;height:1.2rem;width:100%">
             <div style="background-color:#c62828;width:{valor_neg*100:.1f}%;
@@ -141,12 +200,29 @@ def show_home():
         st.markdown(progreso_html, unsafe_allow_html=True)
 
     with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### Evolución últimos 7 días")
         df_ultimos7 = df_pred[df_pred["date"].dt.date <= fecha_seleccionada].dropna(subset=["indice_negatividad"]).sort_values("date").tail(7)
         fig_neg = px.line(df_ultimos7, x="date", y="indice_negatividad", markers=True, line_shape="linear")
         fig_neg.update_traces(line=dict(color="firebrick", width=3), marker=dict(color="firebrick"))
-        fig_neg.update_layout(height=250, margin=dict(l=10, r=10, t=30, b=10), xaxis_title="Fecha", yaxis_title="% Negatividad", template="simple_white")
-        st.plotly_chart(fig_neg, use_container_width=True)
+        fig_neg.update_layout(
+            dragmode=False, 
+            height=250, 
+            margin=dict(l=10, r=10, t=30, b=10), 
+            xaxis=dict(
+                showticklabels=True,
+                showline=False,
+                showgrid=True,
+                title=None
+            ), 
+            yaxis=dict(
+                showticklabels=True,
+                showline=False,
+                showgrid=True,
+                title=None
+            ),
+            template="simple_white")
+        st.plotly_chart(fig_neg, use_container_width=True, config={"displayModeBar": False})
 
     # 🔻 % Tweets Negativos
     if "porcentaje_tweets_negativos" in df_dia.columns:
@@ -156,8 +232,24 @@ def show_home():
         col1, col2 = st.columns([1, 1])
         with col1:
             valor_pct = df_dia["porcentaje_tweets_negativos"].values[0]
+
+            # Valor del día anterior
+            fecha_dia_anterior = fecha_seleccionada - pd.Timedelta(days=1)
+            df_dia_anterior = df_pred[df_pred["date"].dt.date == fecha_dia_anterior]
+
+            if not df_dia_anterior.empty and "porcentaje_tweets_negativos" in df_dia_anterior.columns:
+                valor_anterior_pct = df_dia_anterior["porcentaje_tweets_negativos"].values[0]
+                delta_pct = valor_pct - valor_anterior_pct
+            else:
+                delta_pct = None
+
             st.markdown(f"##### Día: {fecha_seleccionada}")
-            st.metric("% de tweets negativos", value=f"{valor_pct:.2%}")
+            st.metric(
+                label="",
+                value=f"{valor_pct:.1%}",
+                delta=f"{delta_pct:+.1%}" if delta_pct is not None else "N/A",
+                delta_color="inverse"
+            )
             progreso_html_pct = f"""
             <div style="background-color:#eee;border-radius:0.5rem;height:1.2rem;width:100%">
                 <div style="background-color:#ff9800;width:{valor_pct*100:.1f}%;
@@ -167,12 +259,29 @@ def show_home():
             st.markdown(progreso_html_pct, unsafe_allow_html=True)
 
         with col2:
+            st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("##### Evolución últimos 7 días")
             df_pct_ultimos7 = df_pred[df_pred["date"].dt.date <= fecha_seleccionada].dropna(subset=["porcentaje_tweets_negativos"]).sort_values("date").tail(7)
             fig_pct = px.line(df_pct_ultimos7, x="date", y="porcentaje_tweets_negativos", markers=True, line_shape="linear")
             fig_pct.update_traces(line=dict(color="orange", width=3), marker=dict(color="orange"))
-            fig_pct.update_layout(height=250, margin=dict(l=10, r=10, t=30, b=10), xaxis_title="Fecha", yaxis_title="% Tweets Negativos", template="simple_white")
-            st.plotly_chart(fig_pct, use_container_width=True)
+            fig_pct.update_layout(
+                dragmode=False, 
+                height=250, 
+                margin=dict(l=10, r=10, t=30, b=10),
+                xaxis=dict(
+                    showticklabels=True,
+                    showline=False,
+                    showgrid=True,
+                    title=None
+                ), 
+                yaxis=dict(
+                    showticklabels=True,
+                    showline=False,
+                    showgrid=True,
+                    title=None
+                ),
+                template="simple_white")
+            st.plotly_chart(fig_pct, use_container_width=True, config={"displayModeBar": False})
 
     st.markdown("---")
 
