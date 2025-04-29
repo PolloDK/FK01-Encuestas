@@ -2,22 +2,21 @@ import streamlit as st
 from streamlit_navigation_bar import st_navbar
 from pages import home, about
 import os
-
-# --- Configuración general ---
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
-
-# --- Definición de páginas locales ---
-pages = {
-    "Home": home.show_home,
-    "Proyecto": about.show_about,
-}
-
 # --- Ruta del logo ---
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 logo_path = os.path.join(parent_dir, "assets", "logo_fk.png")
 
+# --- Configuración general ---
+st.set_page_config( page_title="Aprobación Presidencial", page_icon=logo_path ,layout="wide", initial_sidebar_state="collapsed")
+
+# --- Definición de páginas locales ---
+pages = {
+    "Inicio": home.show_home,
+    "Proyecto": about.show_about,
+}
+
 # --- Definir TODAS las páginas para el navbar ---
-pages_navbar = ["Home", "Proyecto", "Web", "LinkedIn"]
+pages_navbar = ["Inicio", "Proyecto", "Web", "LinkedIn"]
 
 # --- Asociar URLs externas ---
 urls = {
