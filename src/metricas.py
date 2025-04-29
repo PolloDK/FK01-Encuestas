@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import os
@@ -148,8 +148,17 @@ def generar_wordcloud_para_fecha(target_date):
 
 
 def generar_wordclouds_historicos():
-    df = pd.read_csv(PROCESSED_DATA_PATH, parse_dates=["createdAt"])
+    df = pd.read_csv(PROCESSED_DATA_PATH, parse_dates=["createdAt"], low_memory=False)
     df = df.dropna(subset=["createdAt", "text"])
+
+    # Convertir a datetime naive (sin timezone)
+    df["createdAt"] = df["createdAt"].dt.tz_localize(None)
+
+    fecha_inicio = pd.to_datetime("2024-10-01")
+    fecha_fin = pd.to_datetime(date.today())
+
+    df = df[(df["createdAt"] >= fecha_inicio) & (df["createdAt"] <= fecha_fin)]
+
     dias_unicos = df["createdAt"].dt.date.unique()
 
     for i, fecha in enumerate(tqdm(sorted(dias_unicos), desc="Wordclouds")):

@@ -12,6 +12,7 @@ data/*
 # ¡Pero no ignores esta excepción específica!
 !data/predicciones_diarias.csv
 !data/encuestas.csv
+!data/wordclouds
 
 # (Opcional) Si quieres mantener algún archivo dentro de data/
 # !data/encuestas.csv
@@ -24,7 +25,6 @@ __pycache__/
 # === Wordclouds y logs ===
 logs/
 models/
-data/wordclouds/
 
 # === PyTorch/Transformers warnings ===
 *.log
