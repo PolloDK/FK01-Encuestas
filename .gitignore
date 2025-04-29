@@ -6,9 +6,11 @@ venv/
 # === Archivos de configuración sensibles ===
 .env
 
-# === Carpeta completa de datos ===
-data/
-!data/.gitkeep
+# Ignorar todo dentro de /data
+data/*
+
+# ¡Pero no ignores esta excepción específica!
+!data/predicciones_diarias.csv
 
 # (Opcional) Si quieres mantener algún archivo dentro de data/
 # !data/encuestas.csv
