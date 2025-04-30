@@ -99,11 +99,11 @@ class FeatureEngineer:
             # === Variables derivadas ===
             df_daily = df_daily.sort_values("date").reset_index(drop=True)
 
-            df_daily["approval_rolling_7d"] = df_daily["aprobacion_boric"].shift(1).rolling(window=7, min_periods=7).mean()
+            df_daily["approval_rolling_7d"] = df_daily["aprobacion_boric"].shift(1).rolling(window=7, min_periods=7).mean().fillna(method="ffill") 
             df_daily["approval_lag_7d"] = df_daily["aprobacion_boric"].shift(7)
             df_daily["approval_lag_14d"] = df_daily["aprobacion_boric"].shift(14)
 
-            df_daily["disapproval_rolling_7d"] = df_daily["desaprobacion_boric"].shift(1).rolling(window=7, min_periods=7).mean()
+            df_daily["disapproval_rolling_7d"] = df_daily["desaprobacion_boric"].shift(1).rolling(window=7, min_periods=7).mean().fillna(method="ffill") 
             df_daily["disapproval_lag_7d"] = df_daily["desaprobacion_boric"].shift(7)
             df_daily["disapproval_lag_14d"] = df_daily["desaprobacion_boric"].shift(14)
 

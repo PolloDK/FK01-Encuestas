@@ -1,12 +1,13 @@
 import pandas as pd
+from pathlib import Path
 from datetime import datetime, timedelta, date
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import os
 import re
 from tqdm import tqdm
-from src.config import PROCESSED_DATA_PATH, WORDCLOUD_PATH, PREDICTIONS_PATH, FEATURES_DATASET_PATH
-from src.logger import get_logger
+from config import PROCESSED_DATA_PATH, WORDCLOUD_PATH, PREDICTIONS_PATH, FEATURES_DATASET_PATH
+from logger import get_logger
 logger = get_logger(__name__, "metricas.log")
 
 def clasificar_sentimiento(row):
@@ -164,11 +165,30 @@ def generar_wordclouds_historicos():
     for i, fecha in enumerate(tqdm(sorted(dias_unicos), desc="Wordclouds")):
         generar_wordcloud_para_fecha(fecha)
 
+def generar_wordclouds_pendientes():
+    carpeta_wordclouds = Path("data/wordclouds")  # ajusta si tu carpeta es distinta
+    carpeta_wordclouds.mkdir(parents=True, exist_ok=True)
+
+    fecha_inicio = datetime.strptime("2024-10-01", "%Y-%m-%d").date()
+    fecha_hoy = datetime.today().date()
+    fechas = [fecha_inicio + timedelta(days=i) for i in range((fecha_hoy - fecha_inicio).days + 1)]
+
+    for fecha in tqdm(fechas, desc="🌀 Generando wordclouds pendientes"):
+        archivo_wordcloud = carpeta_wordclouds / f"wordcloud_{fecha}.png"
+
+        if not archivo_wordcloud.exists():
+            try:
+                generar_wordcloud_para_fecha(fecha)
+            except Exception as e:
+                print(f"⚠️ Error generando wordcloud para {fecha}: {e}")
+        else:
+            print(f"✅ Wordcloud ya existe para {fecha}")
 
 def main():
-    calcular_metricas()
-    generar_wordcloud_diario()
+    #calcular_metricas()
+    #generar_wordcloud_diario()
     #generar_wordclouds_historicos()  # Ejecuta solo si quieres correr todos
+    generar_wordclouds_pendientes()
 
 if __name__ == "__main__":
     main()

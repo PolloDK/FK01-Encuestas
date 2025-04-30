@@ -17,7 +17,7 @@ from src.preprocessing import TweetPreprocessor
 from src.features import FeatureEngineer
 from src.modeling import ModelTrainer
 from src.predict import Predictor
-from src.metricas import calcular_metricas, generar_wordcloud_diario
+from src.metricas import calcular_metricas, generar_wordcloud_diario, generar_wordclouds_pendientes
 from src.utils import generar_resumen_diario, enviar_resumen_por_email
 import os
 import subprocess
@@ -114,7 +114,7 @@ def main():
     print(f"Comenzamos el cálculo de métricas")
     calcular_metricas()
     print(f"Comenzamos el armado de la wordcloud")
-    generar_wordcloud_diario()
+    generar_wordclouds_pendientes()
     
     # === Generar y enviar resumen diario ===
     print("Generando resumen diario...")
