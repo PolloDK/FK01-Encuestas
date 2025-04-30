@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import os
 import re
 from tqdm import tqdm
-from config import PROCESSED_DATA_PATH, WORDCLOUD_PATH, PREDICTIONS_PATH, FEATURES_DATASET_PATH
-from logger import get_logger
+from src.config import PROCESSED_DATA_PATH, WORDCLOUD_PATH, PREDICTIONS_PATH, FEATURES_DATASET_PATH
+from src.logger import get_logger
 logger = get_logger(__name__, "metricas.log")
 
 def clasificar_sentimiento(row):

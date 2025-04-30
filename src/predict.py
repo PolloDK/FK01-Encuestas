@@ -79,14 +79,14 @@ class Predictor:
 
                 # Construimos X y filtramos NaNs
                 X_aprob_raw = df_aprob[feature_names]
-                print(X_aprob_raw.tail(10))
-                print("📊 Total de NaNs por columna:")
-                print(X_aprob_raw.isna().sum().sort_values(ascending=False))
+                #print(X_aprob_raw.tail(10))
+                #print("📊 Total de NaNs por columna:")
+                #print(X_aprob_raw.isna().sum().sort_values(ascending=False))
                 logger.info(f"🔍 Filas antes de filtrar NaNs (aprobación): {X_aprob_raw.shape[0]}")
                 mask_notna = X_aprob_raw.notna().all(axis=1)
                 X_aprob_raw = X_aprob_raw[mask_notna]
-                print("🧪 Columnas en X_aprob_raw:", X_aprob_raw.columns.tolist())
-                print(X_aprob_raw.tail(10))
+                #print("🧪 Columnas en X_aprob_raw:", X_aprob_raw.columns.tolist())
+                #print(X_aprob_raw.tail(10))
                 df_aprob = df_aprob.loc[X_aprob_raw.index].copy()
                 logger.info(f"🧹 Filas después de filtrar NaNs (aprobación): {X_aprob_raw.shape[0]}")
                 
