@@ -1,5 +1,4 @@
 import pandas as pd
-import os
 import re
 import nltk
 from nltk.corpus import stopwords
@@ -10,8 +9,9 @@ from scipy.special import softmax
 import torch
 import numpy as np
 from tqdm import tqdm
-from src.config import RAW_DATA_PATH, PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH
+from src.config import PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH
 from src.logger import get_logger
+from src.azure_blob import read_csv_blob, write_csv_blob, append_csv_blob
 logger = get_logger(__name__, "preprocessing.log")
 
 nltk.download("stopwords")
@@ -89,14 +89,14 @@ class TweetPreprocessor:
             logger.warning(f"⚠️ Error generando embedding: {e}")
             return np.zeros(768)
     
-    def run_pipeline(self):
-        if not os.path.isfile(self.input_path):
+    def run_pipeline(self) -> bool:
+        try:
+            df_all = read_csv_blob(self.input_path)
+            df_all["createdAt"] = pd.to_datetime(df_all["createdAt"])
+        except FileNotFoundError:
             print(f"❌ No se encontró el archivo {self.input_path}.")
             logger.error(f"No se encontró el archivo {self.input_path}.")
-            return
-
-        df_all = pd.read_csv(self.input_path, low_memory=False)
-        df_all["createdAt"] = pd.to_datetime(df_all["createdAt"])
+            return False
 
         if "processed" not in df_all.columns:
             df_all["processed"] = False
@@ -105,7 +105,7 @@ class TweetPreprocessor:
         if df_nuevos.empty:
             print("⏭️ No hay nuevos tweets para procesar.")
             logger.info("No hay nuevos tweets para procesar.")
-            return
+            return False
 
         print(f"🔄 Procesando tweets ")
 
@@ -116,9 +116,9 @@ class TweetPreprocessor:
         if df_nuevos.empty:
             print("⏭️ Todos los tweets fueron descartados tras limpieza.")
             logger.info("Todos los tweets fueron descartados tras limpieza.")
-            return
+            return False
 
-        df_nuevos.to_csv(PREPROCESSED_PATH, index=False)
+        write_csv_blob(df_nuevos, PREPROCESSED_PATH)
         print(f"💾 Guardado texto limpio en: {PREPROCESSED_PATH}")
         logger.info(f"💾 Texto limpio guardado en: {PREPROCESSED_PATH}")
 
@@ -130,7 +130,7 @@ class TweetPreprocessor:
         df_sentiment = df_nuevos.copy()
         df_sentiment[["sentiment_label", "score_label", "score_negative", "score_neutral", "score_positive"]] = pd.DataFrame(resultados.tolist(), index=df_nuevos.index)
 
-        df_sentiment.to_csv(SENTIMENT_DATA_PATH, index=False)
+        write_csv_blob(df_sentiment, SENTIMENT_DATA_PATH)
         print(f"💾 Guardado análisis de sentimiento en: {SENTIMENT_DATA_PATH}")
         logger.info(f"💾 Sentimiento guardado en: {SENTIMENT_DATA_PATH}")
 
@@ -143,7 +143,7 @@ class TweetPreprocessor:
         df_embedding = df_sentiment.reset_index(drop=True)
         df_embedding_final = pd.concat([df_embedding, robertuito_features], axis=1)
 
-        df_embedding_final.to_csv(EMBEDDING_DATA_PATH, index=False)
+        write_csv_blob(df_embedding_final, EMBEDDING_DATA_PATH)
         print(f"💾 Embeddings guardados en: {EMBEDDING_DATA_PATH}")
         logger.info(f"💾 Embeddings guardados en: {EMBEDDING_DATA_PATH}")
 
@@ -152,40 +152,19 @@ class TweetPreprocessor:
         df_processed = df_embedding_final.copy()
         df_processed["id"] = df_processed["id"].astype(str)
 
-        if os.path.exists(PROCESSED_DATA_PATH):
-            print(f"✅ Existe archivo en {PROCESSED_DATA_PATH}")
-            logger.info("✅ Existe archivo processed_data.csv")
-
-            try:
-                # Leer sólo encabezado para obtener columnas
-                with open(PROCESSED_DATA_PATH, "r", encoding="utf-8") as f:
-                    first_line = f.readline().strip()
-                columnas_existentes = first_line.split(",")
-                
-                # Asegurar que columnas estén en el mismo orden
-                df_processed = df_processed[columnas_existentes]
-
-                # Guardar en modo append sin encabezado
-                df_processed.to_csv(PROCESSED_DATA_PATH, mode="a", header=False, index=False)
-                print(f"✅ Nuevos datos agregados a {PROCESSED_DATA_PATH}")
-                logger.info(f"✅ Nuevos datos agregados a {PROCESSED_DATA_PATH}")
-            except Exception as e:
-                print(f"⚠️ Error al guardar en {PROCESSED_DATA_PATH}: {e}")
-                logger.error(f"⚠️ Error al guardar en {PROCESSED_DATA_PATH}: {e}")
-        else:
-            df_processed.to_csv(PROCESSED_DATA_PATH, index=False)
-            print(f"📄 Archivo nuevo creado: {PROCESSED_DATA_PATH}")
-            logger.info(f"📄 Archivo nuevo creado: {PROCESSED_DATA_PATH}")
-
+        append_csv_blob(df_processed, PROCESSED_DATA_PATH)
         print(f"✅ Archivo final actualizado en: {PROCESSED_DATA_PATH}")
         logger.info(f"✅ Archivo final actualizado en: {PROCESSED_DATA_PATH}")
 
         # === 5. Actualizar raw_data con flag "processed"
         print(f"Actualizando flag 'processed'")
         df_all.loc[df_all["id"].isin(df_nuevos["id"]), "processed"] = True
-        df_all.to_csv(self.input_path, index=False)
+        write_csv_blob(df_all, self.input_path)
         print(f"Tweets clasificados como 'processed' en {self.input_path}")
         logger.info(f"📝 Flag 'processed' actualizado en {self.input_path}")
+
+        return True
+
 
 
 #if __name__ == "__main__":

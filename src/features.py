@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
-import os
+from src.azure_blob import read_csv_blob, write_csv_blob
 from sklearn.preprocessing import RobustScaler
 from src.logger import get_logger
+from src.config import PROCESSED_DATA_PATH, ENCUESTAS_PATH, FEATURES_DATASET_PATH
 
 logger = get_logger(__name__, "features.log")
 
@@ -16,12 +17,11 @@ class FeatureEngineer:
         return (values * weights).sum() / weights.sum() if weights.sum() != 0 else values.mean()
 
     def run(self):
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
         logger.info("Inicio de feature engineering")
 
         try:
-            df = pd.read_csv(self.input_path, low_memory=False)
-            df_encuestas = pd.read_csv(self.encuestas_path, low_memory=False)
+            df = read_csv_blob(self.input_path)
+            df_encuestas = read_csv_blob(self.encuestas_path)
             logger.info(f"Archivos cargados: {self.input_path}, {self.encuestas_path}")
         except Exception as e:
             logger.error(f"Error al cargar archivos: {e}")
@@ -31,12 +31,12 @@ class FeatureEngineer:
         df["date"] = df["createdAt"].dt.floor("D").dt.tz_localize(None)
         df_encuestas["date"] = pd.to_datetime(df_encuestas["date"]).dt.tz_localize(None)
 
-        if os.path.exists(self.output_path):
-            df_existing = pd.read_csv(self.output_path)
+        try:
+            df_existing = read_csv_blob(self.output_path)
             df_existing["date"] = pd.to_datetime(df_existing["date"])
             fechas_nuevas = df["date"].unique()
             df_existing = df_existing[~df_existing["date"].isin(fechas_nuevas)]
-        else:
+        except FileNotFoundError:
             df_existing = None
 
         if df.empty:
@@ -126,7 +126,7 @@ class FeatureEngineer:
             if df_existing is not None:
                 df_daily = pd.concat([df_existing, df_daily], ignore_index=True).drop_duplicates(subset=["date"])
 
-            df_daily.to_csv(self.output_path, index=False, encoding="utf-8")
+            write_csv_blob(df_daily, self.output_path)
             logger.info(f"✅ Features guardados en: {self.output_path}")
             logger.info(f"Días nuevos procesados: {df['date'].nunique()}")
 
@@ -134,9 +134,9 @@ class FeatureEngineer:
             logger.error(f"Error durante feature engineering: {e}")
 
 if __name__ == "__main__":
-    input_path = "data/processed_data.csv"
-    encuestas_path = "data/encuestas.csv"
-    output_path = "data/features_dataset.csv"
+    input_path = PROCESSED_DATA_PATH
+    encuestas_path = ENCUESTAS_PATH
+    output_path = FEATURES_DATASET_PATH
 
     engineer = FeatureEngineer(input_path, encuestas_path, output_path)
     engineer.run()

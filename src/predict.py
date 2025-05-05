@@ -2,8 +2,9 @@ import pandas as pd
 import joblib
 import numpy as np
 from pathlib import Path
-from src.config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
-from src.logger import get_logger
+from azure_blob import read_csv_blob, write_csv_blob
+from config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
+from logger import get_logger
 
 logger = get_logger(__name__, "predict.log")
 
@@ -11,18 +12,10 @@ class Predictor:
     def __init__(self, features_path=FEATURES_DATASET_PATH, model_dir=MODEL_DIR):
         self.features_path = Path(features_path)
         self.model_dir = Path(model_dir)
-
         # === Aprobación ===
         self.aprobacion_bundle = self._load_model("modelo_aprobacion.pkl")
-        #print(self.aprobacion_bundle)
-        #loaded = joblib.load("models/modelo_aprobacion.pkl")
-        #print("🧪 Claves del modelo:", loaded.keys())
-        #print("📦 Modelo:", loaded["model"])
-
         # === Desaprobación ===
         self.desaprobacion_bundle = self._load_model("modelo_desaprobacion.pkl")
-        #print("📂 Modelo de desaprobación cargado desde:", self.model_dir / "modelo_desaprobacion.pkl")
-        #print("🔍 Feature names:", self.desaprobacion_bundle["feature_names"])
 
     def _load_model(self, filename):
         path = self.model_dir / filename
@@ -40,12 +33,17 @@ class Predictor:
             return None
 
     def predict(self):
+        print("🚀 Entrando a método `predict()`")
         try:
-            df = pd.read_csv(self.features_path)
-            logger.info(f"Features cargados desde {self.features_path}")
+            df = read_csv_blob(str(self.features_path))
+            if df.empty or df.shape[0] == 0 or df.shape[1] == 0:
+                logger.warning(f"⚠️ El archivo {self.features_path} fue cargado pero está vacío.")
+                return pd.DataFrame()
+            logger.info(f"✅ Features cargados desde {self.features_path}: {df.shape}")
             print(f"✅ Features cargados: {df.shape}")
         except Exception as e:
-            logger.error(f"No se pudo cargar el archivo de features: {e}")
+            logger.error(f"❌ No se pudo cargar el archivo de features: {e}")
+            print(f"❌ ERROR leyendo features_dataset.csv: {e}")
             return pd.DataFrame()
 
         resultados = pd.DataFrame()
@@ -193,6 +191,7 @@ class Predictor:
         return resultados.sort_values("date")
 
 if __name__ == "__main__":
+    
     predictor = Predictor()
     resultados = predictor.predict()
 
@@ -201,5 +200,5 @@ if __name__ == "__main__":
         resultados = pd.DataFrame(columns=["date", "prediccion_aprobacion", "prediccion_desaprobacion"])
 
     print(f"💾 Guardando archivo en: {PREDICTIONS_PATH}")
-    resultados.to_csv(PREDICTIONS_PATH, index=False)
+    write_csv_blob(resultados, PREDICTIONS_PATH)
     print(f"📈 Predicción guardada en {PREDICTIONS_PATH}")

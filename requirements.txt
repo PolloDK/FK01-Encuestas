@@ -24,6 +24,7 @@ vaderSentiment
 plotly
 pytest
 logging
+azure-storage-blob
 
 pygments==2.14.0
 markdown-it-py==2.2.0

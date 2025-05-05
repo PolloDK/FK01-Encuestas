@@ -7,6 +7,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
+from src.azure_blob import read_csv_blob
 from src.config import (
     TEST_LOG_PATH,
     PREDICTIONS_PATH,
@@ -45,7 +46,7 @@ def generar_resumen_diario():
     # === PREDICCIÓN ===
     resumen.append("\n## 📈 Predicción de Aprobación Presidencial\n")
     try:
-        df_pred = pd.read_csv(PREDICTIONS_PATH, parse_dates=["date"])
+        df_pred = read_csv_blob(PREDICTIONS_PATH)
         ultima = df_pred.sort_values("date").iloc[-1]
         penultima = df_pred.sort_values("date").iloc[-2] if len(df_pred) > 1 else None
 
@@ -79,7 +80,7 @@ def enviar_resumen_por_email(contenido_md, destinatario="crodriguez@fkeconomics.
         print("❌ Faltan EMAIL_REMITENTE o EMAIL_CLAVE_APP")
         return
 
-    df_pred = pd.read_csv(PREDICTIONS_PATH, parse_dates=["date"]).sort_values("date")
+    df_pred = read_csv_blob(PREDICTIONS_PATH).sort_values("date")
     ultima = df_pred.iloc[-1]
     penultima = df_pred.iloc[-2] if len(df_pred) > 1 else None
     fecha_str = ultima["date"].strftime("%Y-%m-%d")

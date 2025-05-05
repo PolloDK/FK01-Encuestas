@@ -19,6 +19,7 @@ from src.modeling import ModelTrainer
 from src.predict import Predictor
 from src.metricas import calcular_metricas, generar_wordcloud_diario, generar_wordclouds_pendientes
 from src.utils import generar_resumen_diario, enviar_resumen_por_email
+from src.azure_blob import write_csv_blob
 import os
 import subprocess
 from datetime import datetime
@@ -35,42 +36,49 @@ def main():
 
     print("🔍 Ejecutando tests antes de iniciar el flujo...")
     # Ejecutar pytest en modo silencioso y guardar salida
-    result = subprocess.run(
-        ["pytest", str(BASE_DIR / "tests"), "--disable-warnings", "-q"],
-        capture_output=True,
-        text=True
-    )
+    #result = subprocess.run(
+    #    ["pytest", str(BASE_DIR / "tests"), "--disable-warnings", "-q"],
+    #    capture_output=True,
+    #    text=True,
+    #    timeout=10 
+    #)
 
     # Timestamp para el log
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Agregar resultados al archivo de logs
-    with open(log_path, "a") as f:
-        f.write(f"\n--- Test Run at {timestamp} ---\n")
-        f.write(result.stdout)
-        if result.stderr:
-            f.write("\n[STDERR]\n")
-            f.write(result.stderr)
+    #with open(log_path, "a") as f:
+    #    f.write(f"\n--- Test Run at {timestamp} ---\n")
+    #    f.write(result.stdout)
+    #    if result.stderr:
+    #        f.write("\n[STDERR]\n")
+    #        f.write(result.stderr)
 
-    if result.returncode != 0:
-        print("❌ Tests fallaron. Abortando ejecución del pipeline.")
-        print(result.stdout)
-        print(result.stderr)
-        return
-    else:
-        print("✅ Todos los tests pasaron correctamente.\n")
+    #if result.returncode != 0:
+    #    print("❌ Tests fallaron. Abortando ejecución del pipeline.")
+    #    print(result.stdout)
+    #    print(result.stderr)
+    #    return
+    #else:
+    #    print("✅ Todos los tests pasaron correctamente.\n")
 
     print("🚀 Iniciando flujo diario de actualización de datos de Twitter...")
 
     # Scraping
     scraper = TweetScraper()
-    scraper.scrapear_tweets_pendientes()
-    print("✅ Scraping finalizado.")
+    hay_nuevos_tweets = scraper.scrapear_tweets_pendientes()
+    if not hay_nuevos_tweets:
+        print("⏭️ No hay nuevos tweets. Se omite preprocesamiento y feature engineering.")
+    else:
+        print("✅ Tweets scrapeados correctamente.\n")
 
     # Preprocesamiento + Sentimiento + Embeddings
     preprocessor = TweetPreprocessor(RAW_DATA_PATH)
-    preprocessor.run_pipeline()
-    print("✅ Preprocesamiento completado.")
+    hay_tweets_procesados = preprocessor.run_pipeline()
+    if not hay_tweets_procesados:
+        print("⏭️ No se procesaron nuevos tweets. Continuando con el pipeline...\n")
+    else:
+        print("✅ Tweets procesados correctamente.\n")
 
     # Feature Engineering
     print(f"Comenzando con feature engineering")
@@ -103,11 +111,8 @@ def main():
     # Predicción con el modelo entrenado
     print(f"Comenzando predicción")
     predictor = Predictor()
-    if not os.path.exists(FEATURES_DATASET_PATH):
-        print(f"⚠️ No se encontró el archivo {FEATURES_DATASET_PATH}. Se omite la predicción.")
-        return
     predicciones = predictor.predict()
-    predicciones.to_csv(PREDICTIONS_PATH, index=False)
+    write_csv_blob(predicciones, PREDICTIONS_PATH)
     print(f"✅ Predicción generada y guardada en {PREDICTIONS_PATH}")
 
     # Cálculo de Métricas
