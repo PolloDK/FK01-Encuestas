@@ -3,13 +3,15 @@ import pandas as pd
 import plotly.express as px
 import os
 from datetime import datetime, date
+from src.azure_blob import container_client
+from src.azure_blob import read_csv_blob, blob_exists
+from io import BytesIO
 from PIL import Image
 
 @st.cache_data
 def cargar_datos():
-    df_pred = pd.read_csv("data/predicciones_diarias.csv", parse_dates=["date"])
-    df_pred["prediccion_aprobacion"] = df_pred["prediccion_aprobacion"]
-    df_cadem = pd.read_csv("data/encuestas.csv", parse_dates=["date"])
+    df_pred = read_csv_blob("predicciones_diarias.csv")
+    df_cadem = read_csv_blob("encuestas.csv")
     return df_pred.sort_values("date"), df_cadem.sort_values("date")
 
 st.cache_data.clear()
@@ -289,10 +291,12 @@ def show_home():
     st.markdown("### Nube de Palabras del Día")
     col1, col2 = st.columns([1, 1])
     with col1:
-        wordcloud_path = f"data/wordclouds/wordcloud_{fecha_seleccionada}.png"
-        if os.path.exists(wordcloud_path):
-            img = Image.open(wordcloud_path)
-            st.image(img, caption=f"Nube de Palabras - {fecha_seleccionada}", use_container_width=True)
+        blob_path = f"wordclouds/wordcloud_{fecha_seleccionada}.png"
+        if blob_exists(blob_path):
+            blob_client = container_client.get_blob_client(blob_path)
+            img_data = blob_client.download_blob().readall()
+            img = Image.open(BytesIO(img_data))
+            st.image(img, ...)
         else:
             st.warning(f"⚠️ La nube de palabras aún no está disponible para {fecha_seleccionada}.")
 

@@ -41,10 +41,3 @@ LOGO_PATH = BASE_DIR / "app/assets/logo_fk.png"
 # ========================
 
 APIFY_API_KEY = os.getenv("APIFY_API_KEY")
-
-# ========================
-# 🔧 PARÁMETROS MODELO
-# ========================
-
-DEFAULT_MODEL_NAME = "xgboost"
-SEED = 42

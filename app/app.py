@@ -20,7 +20,7 @@ pages_navbar = ["Inicio", "Proyecto", "Web", "LinkedIn"]
 
 # --- Asociar URLs externas ---
 urls = {
-    "Web": "https://www.fkeconomics.com/",  # 👈 cambia por tu sitio real
+    "Web": "https://www.fkeconomics.com/",
     "LinkedIn": "https://www.linkedin.com/company/fkeconomics"
 }
 
