@@ -67,15 +67,19 @@ class TweetScraper:
 
                 df_existing = pd.concat([df_existing, df_nuevos], ignore_index=True).drop_duplicates(subset=["id"])
                 nuevos_tweets = True  # <--- Se encontraron tweets nuevos
-
+                print((f"✅ {len(df_nuevos)} tweets agregados para {dia}."))
                 logger.info(f"✅ {len(df_nuevos)} tweets agregados para {dia}.")
             except Exception as e:
+                print((f"❌ Error al scrapear para {dia}: {e}"))
                 logger.error(f"❌ Error al scrapear para {dia}: {e}")
 
         if nuevos_tweets:
+            print((f"Guardando nuevos tweets"))
+            print(df_existing.tail())
             write_csv_blob(df_existing, RAW_DATA_PATH)
             logger.info(f"\n💾 Base actualizada con {len(df_existing)} registros.")
             logger.info("Scraping finalizado y guardado.")
+            print(("Scraping finalizado y guardado."))
         return nuevos_tweets
 
 
