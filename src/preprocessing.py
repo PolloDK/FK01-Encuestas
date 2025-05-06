@@ -9,9 +9,9 @@ from scipy.special import softmax
 import torch
 import numpy as np
 from tqdm import tqdm
-from src.config import PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH
-from src.logger import get_logger
-from src.azure_blob import read_csv_blob, write_csv_blob, append_csv_blob
+from config import PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH, RAW_DATA_PATH
+from logger import get_logger
+from azure_blob import read_csv_blob, write_csv_blob, append_csv_blob
 logger = get_logger(__name__, "preprocessing.log")
 
 nltk.download("stopwords")
@@ -167,6 +167,6 @@ class TweetPreprocessor:
 
 
 
-#if __name__ == "__main__":
-#    preprocessor = TweetPreprocessor(input_path=RAW_DATA_PATH)
-#    preprocessor.run_pipeline()
+if __name__ == "__main__":
+    preprocessor = TweetPreprocessor(input_path=RAW_DATA_PATH)
+    preprocessor.run_pipeline()

@@ -57,9 +57,14 @@ def write_csv_blob(df: pd.DataFrame, blob_name: str) -> None:
     total_size = buffer.getbuffer().nbytes
     with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"⬆️ Subiendo {blob_name}") as pbar:
         def progress_hook(current, total):
-            pbar.update(current - pbar.n)
+            if current is not None:
+                pbar.update(current - pbar.n)
 
-        blob_client.upload_blob(buffer, overwrite=True, raw_response_hook=lambda resp: progress_hook(resp.context['upload_stream_current'], total_size))
+        blob_client.upload_blob(
+            buffer,
+            overwrite=True,
+            raw_response_hook=lambda resp: progress_hook(resp.context.get('upload_stream_current'), total_size)
+        )
 
     print(f"✅ Archivo actualizado: {blob_name}")
 
