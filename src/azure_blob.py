@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from azure.storage.blob import BlobClient
 from azure.storage.blob import BlobServiceClient
 import pandas as pd
 from io import BytesIO
@@ -100,3 +101,17 @@ def blob_exists(blob_path: str) -> bool:
     """Verifica si un blob ya existe en el contenedor."""
     blob_client = blob_service_client.get_blob_client(container=AZURE_BLOB_CONTAINER, blob=blob_path)
     return blob_client.exists()
+
+def download_blob(blob_name: str, local_path: str):
+    """Descarga un archivo binario desde Azure Blob Storage y lo guarda localmente."""
+    print(f"📥 Descargando {blob_name} a {local_path}...")
+    blob_client = container_client.get_blob_client(blob_name)
+
+    if not blob_client.exists():
+        raise FileNotFoundError(f"❌ No existe el blob: {blob_name}")
+
+    with open(local_path, "wb") as f:
+        data = blob_client.download_blob()
+        f.write(data.readall())
+
+    print(f"✅ Descargado: {local_path}")

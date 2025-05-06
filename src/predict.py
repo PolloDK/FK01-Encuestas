@@ -2,7 +2,8 @@ import pandas as pd
 import joblib
 import numpy as np
 from pathlib import Path
-from azure_blob import read_csv_blob, write_csv_blob
+from src.azure_blob import read_csv_blob, write_csv_blob
+from src.azure_blob import download_blob
 from config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
 from logger import get_logger
 
@@ -19,18 +20,13 @@ class Predictor:
 
     def _load_model(self, filename):
         path = self.model_dir / filename
-        #print("🔍 Ruta completa:", path)
-
         if not path.exists():
-            logger.warning(f"⚠️ No se encontró el archivo: {path}")
-            return None
-        try:
-            modelo = joblib.load(path)
-            print("✅ Modelo cargado con éxito")
-            return modelo
-        except Exception as e:
-            logger.error(f"❌ Error al cargar {filename}: {e}")
-            return None
+            print(f"📥 Modelo {filename} no encontrado localmente. Descargando desde Azure...")
+            try:
+                download_blob(f"models/{filename}", str(path))
+            except Exception as e:
+                logger.error(f"❌ Error al descargar modelo desde Azure: {e}")
+                return None
 
     def predict(self):
         print("🚀 Entrando a método `predict()`")

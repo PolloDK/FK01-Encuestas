@@ -20,53 +20,43 @@ from src.config import (
 def generar_resumen_diario():
     resumen = []
 
-    resumen.append(f"# 📝 Resumen Diario\n")
-    resumen.append(f"**Fecha de ejecución:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    resumen.append(f"# Resumen Diario\n")
+    resumen.append(f"Fecha de ejecución: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-    # === TESTS ===
-    resumen.append("## ✅ Resultados de Tests Automáticos\n")
-    try:
-        with open(TEST_LOG_PATH, "r") as f:
-            logs = f.read()
-        ultimo_bloque = logs.strip().split("--- Test Run at")[-1]
-        total_tests = re.search(r"(\d+) passed", ultimo_bloque)
-        failed_tests = re.search(r"(\d+) failed", ultimo_bloque)
-
-        if failed_tests:
-            resumen.append("- ❌ **Tests fallaron**")
-            resumen.append(f"  - Tests fallidos: **{failed_tests.group(1)}**")
-        elif total_tests:
-            resumen.append("- ✅ **Todos los tests pasaron correctamente**")
-            resumen.append(f"  - Tests ejecutados: **{total_tests.group(1)}**")
-        else:
-            resumen.append("- ⚠️ No se pudo interpretar el resultado de los tests.")
-    except Exception as e:
-        resumen.append(f"- ⚠️ Error al leer el log de tests: `{e}`")
-
-    # === PREDICCIÓN ===
-    resumen.append("\n## 📈 Predicción de Aprobación Presidencial\n")
+    resumen.append("## Predicción de Aprobación Presidencial\n")
     try:
         df_pred = read_csv_blob(PREDICTIONS_PATH)
         ultima = df_pred.sort_values("date").iloc[-1]
         penultima = df_pred.sort_values("date").iloc[-2] if len(df_pred) > 1 else None
 
-        resumen.append(f"- 📅 Fecha: **{ultima['date'].date()}**")
-        resumen.append(f"- 🔢 Aprobación estimada: **{ultima['prediccion_aprobacion']:.4f}**")
+        resumen.append(f"- Fecha: {ultima['date'].date()}")
+        resumen.append(f"- Aprobación estimada: {ultima['prediccion_aprobacion'] * 100:.1f}%")
 
         if penultima is not None:
-            cambio = ultima['prediccion_aprobacion'] - penultima['prediccion_aprobacion']
+            cambio = (ultima['prediccion_aprobacion'] - penultima['prediccion_aprobacion']) * 100
             signo = "+" if cambio >= 0 else ""
-            resumen.append(f"- 📊 Cambio respecto al día anterior: **{signo}{cambio:.4f}**")
+            resumen.append(f"- Cambio respecto al día anterior: {signo}{cambio:.1f} pp")
+
+        resumen.append(f"- Desaprobación estimada: {ultima['prediccion_desaprobacion'] * 100:.1f}%")
+        if penultima is not None:
+            cambio_desaprob = (ultima['prediccion_desaprobacion'] - penultima['prediccion_desaprobacion']) * 100
+            signo_d = "+" if cambio_desaprob >= 0 else ""
+            resumen.append(f"- Cambio en desaprobación: {signo_d}{cambio_desaprob:.1f} pp")
+
     except Exception as e:
-        resumen.append(f"- ⚠️ Error al leer predicciones: `{e}`")
+        resumen.append(f"- Error al leer predicciones: `{e}`")
 
     resumen_str = "\n".join(resumen)
     os.makedirs(os.path.dirname(RESUMEN_MD_PATH), exist_ok=True)
     with open(RESUMEN_MD_PATH, "w", encoding="utf-8") as f:
         f.write(resumen_str)
 
-    print("\n📝 Resumen diario generado:")
-    print(resumen_str)
+    print("\n📝 RESUMEN DIARIO")
+    print("=" * 60)
+    print(f"Fecha de ejecución: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    for linea in resumen[2:]:
+        print(linea)
+    print("=" * 60)
 
     return resumen_str
 
@@ -101,9 +91,14 @@ def enviar_resumen_por_email(contenido_md, destinatario="crodriguez@fkeconomics.
     wordcloud_path = wordcloud_path if wordcloud_path.exists() else None
 
     html_render = markdown(contenido_md)
-    cambio_aprob = ultima["prediccion_aprobacion"] - penultima["prediccion_aprobacion"]
+
+    cambio_aprob = (ultima["prediccion_aprobacion"] - penultima["prediccion_aprobacion"]) * 100
     color_aprob = "#27ae60" if cambio_aprob > 0 else "#c0392b"
     flecha_aprob = "🔺" if cambio_aprob > 0 else "🔻"
+
+    cambio_desaprob = (ultima["prediccion_desaprobacion"] - penultima["prediccion_desaprobacion"]) * 100
+    color_desaprob = "#27ae60" if cambio_desaprob > 0 else "#c0392b"
+    flecha_desaprob = "🔺" if cambio_desaprob > 0 else "🔻"
 
     html_base = f"""<html><body style="font-family: Arial; padding: 30px;">
     <div style="max-width: 720px; margin:auto; background:#fff; border-radius:10px;">
@@ -124,11 +119,15 @@ def enviar_resumen_por_email(contenido_md, destinatario="crodriguez@fkeconomics.
         <div style="background:#eee; height:20px; border-radius:5px;">
           <div style="background:orange; width:{min(pct_neg,100):.1f}%; height:100%; border-radius:5px;"></div>
         </div>
-        <p><strong>{pct_neg:.2f}%</strong> <span style="color:{color_pct};">{flecha_pct} {cambio_pct:+.2f}%</span></p>
+        <p><strong>{pct_neg:.2f}%</strong> <span style="color:{color_pct};">{flecha_pct} {cambio_pct:+.2f} pp</span></p>
 
         <h3>📈 Aprobación estimada</h3>
-        <p><strong>{ultima['prediccion_aprobacion']:.4f}</strong> 
-        <span style="color:{color_aprob};">{flecha_aprob} {cambio_aprob:+.4f}</span></p>
+        <p><strong>{ultima['prediccion_aprobacion']*100:.1f}%</strong> 
+        <span style="color:{color_aprob};">{flecha_aprob} {cambio_aprob:+.1f} pp</span></p>
+
+        <h3>📉 Desaprobación estimada</h3>
+        <p><strong>{ultima['prediccion_desaprobacion']*100:.1f}%</strong> 
+        <span style="color:{color_desaprob};">{flecha_desaprob} {cambio_desaprob:+.1f} pp</span></p>
     """
 
     if wordcloud_path:
@@ -165,3 +164,10 @@ def enviar_resumen_por_email(contenido_md, destinatario="crodriguez@fkeconomics.
         print(f"📬 Correo enviado profesionalmente a {destinatario}")
     except Exception as e:
         print(f"❌ Error al enviar correo: {e}")
+
+
+if __name__ == "__main__":
+    resumen_diario = generar_resumen_diario()
+    print(resumen_diario)
+    enviar_resumen_por_email(resumen_diario)
+    print("✅ Resumen diario generado y enviado por correo.")
