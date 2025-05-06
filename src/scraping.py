@@ -21,7 +21,7 @@ class TweetScraper:
             logger.info("📂 Buscando raw_data con tweets...")
             df_existing = read_csv_blob(RAW_DATA_PATH)
             df_existing["createdAt"] = pd.to_datetime(df_existing["createdAt"], errors="coerce")
-            df_existing["date"] = pd.to_datetime(df_existing["createdAt"].dt.date)
+            df_existing["date"] = pd.to_datetime(df_existing["createdAt"], errors="coerce").dt.date
             logger.info(f"✅ Base cargada con éxito.")
         except FileNotFoundError:
             df_existing = pd.DataFrame(columns=["id", "createdAt", "text"])
@@ -85,6 +85,6 @@ class TweetScraper:
 
 
 
-#if __name__ == "__main__":
-#    scraper = TweetScraper()
-#    scraper.scrapear_tweets_pendientes()
+if __name__ == "__main__":
+    scraper = TweetScraper()
+    scraper.scrapear_tweets_pendientes()
