@@ -2,9 +2,9 @@ import pandas as pd
 import joblib
 import numpy as np
 from pathlib import Path
-from src.azure_blob import read_csv_blob, write_csv_blob, download_blob_file
-from src.config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
-from src.logger import get_logger
+from azure_blob import read_csv_blob, write_csv_blob, download_blob_file
+from config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
+from logger import get_logger
 
 logger = get_logger(__name__, "predict.log")
 
@@ -20,11 +20,19 @@ class Predictor:
     def _load_model(self, filename):
         path = self.model_dir / filename
         print(f"📥 Descargando modelo {filename} desde Azure Blob Storage...")
-
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)  # <- asegúrate de que la carpeta existe
             download_blob_file(f"models/{filename}", str(path))
-            return joblib.load(path)
+            model_loaded = joblib.load(path)
+            print(f"🔍 Tipo de modelo cargado: {type(model_loaded)}")
+
+            if isinstance(model_loaded, dict):
+                print(f"🔑 Claves del bundle: {model_loaded.keys()}")
+            else:
+                print("❌ El modelo cargado no es un diccionario. No se puede usar.")
+                return None
+            print(f"🔍 Contenido del modelo {filename}: {type(model_loaded)}")
+            print(f"🔑 Claves: {getattr(model_loaded, 'keys', lambda: 'no es dict')()}")
+            return model_loaded
         except Exception as e:
             logger.error(f"❌ Error al descargar o cargar modelo {filename} desde Azure: {e}")
             return None
@@ -44,7 +52,7 @@ class Predictor:
             return pd.DataFrame()
 
         resultados = pd.DataFrame()
-
+        
         # === Predicción de aprobación ===
         if self.aprobacion_bundle:
             try:
@@ -55,6 +63,8 @@ class Predictor:
                 model = self.aprobacion_bundle.get("model")
                 scaler_X = self.aprobacion_bundle.get("scaler_X", None)
                 scaler_y = self.aprobacion_bundle.get("scaler_y", None)
+                print("🧪 Feature names esperadas:", feature_names)
+                print("📊 Columnas del DataFrame:", df.columns.tolist())
                 
                 #if self.aprobacion_bundle:
                 #    print("✅ Validación bundle:")
