@@ -7,12 +7,15 @@ venv/
 .env
 
 # Ignorar todo dentro de /data
-data/*
+data/
+
+# Ignorar notebooks
+notebooks/
 
 # ¡Pero no ignores esta excepción específica!
-!data/predicciones_diarias.csv
-!data/encuestas.csv
-!data/wordclouds
+#!data/predicciones_diarias.csv
+#!data/encuestas.csv
+#!data/wordclouds
 
 # (Opcional) Si quieres mantener algún archivo dentro de data/
 # !data/encuestas.csv
