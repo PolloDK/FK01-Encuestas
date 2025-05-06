@@ -92,7 +92,7 @@ class TweetPreprocessor:
     def run_pipeline(self) -> bool:
         try:
             df_all = read_csv_blob(self.input_path)
-            df_all["createdAt"] = pd.to_datetime(df_all["createdAt"])
+            df_all["createdAt"] = pd.to_datetime(df_all["createdAt"], errors="coerce")
         except FileNotFoundError:
             print(f"❌ No se encontró el archivo {self.input_path}.")
             logger.error(f"No se encontró el archivo {self.input_path}.")

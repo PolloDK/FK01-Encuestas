@@ -66,7 +66,7 @@ class Predictor:
                 #    print("🔍 Bundle keys:", self.aprobacion_bundle.keys())
 
                 # Asegura que la columna date esté en formato reconocible de fecha
-                df_aprob["date"] = pd.to_datetime(df_aprob["date"])
+                df_aprob["date"] = pd.to_datetime(df_aprob["date"], errors="coerce")
 
                 # Asegura que todas las columnas requeridas estén en el dataset
                 missing_cols = [col for col in feature_names if col not in df_aprob.columns]
@@ -131,7 +131,7 @@ class Predictor:
                 #print("Modelo entrenado:", model)
                 #print("🔍 Bundle keys:", self.desaprobacion_bundle.keys())
 
-                df_desaprob["date"] = pd.to_datetime(df_desaprob["date"])
+                df_desaprob["date"] = pd.to_datetime(df_desaprob["date"], errors="coerce")
 
                 missing_cols = [col for col in feature_names if col not in df_desaprob.columns]
                 if missing_cols:

@@ -38,6 +38,7 @@ def calcular_metricas():
 
     try:
         df_features = read_csv_blob(FEATURES_DATASET_PATH)
+        df_features["date"] = pd.to_datetime(df_features["date"], errors="coerce")
         negatividad_por_dia = df_features.groupby(df_features['date'].dt.date)['score_negative'].mean().reset_index()
         negatividad_por_dia.columns = ['date', 'indice_negatividad']
         negatividad_por_dia["date"] = pd.to_datetime(negatividad_por_dia["date"])
@@ -170,6 +171,7 @@ def generar_wordclouds_historicos():
     df = df.dropna(subset=["createdAt", "text"])
 
     # Convertir a datetime naive (sin timezone)
+    df["createdAt"] = pd.to_datetime(df["createdAt"], errors="coerce")
     df["createdAt"] = df["createdAt"].dt.tz_localize(None)
 
     fecha_inicio = pd.to_datetime("2024-10-01")

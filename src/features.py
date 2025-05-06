@@ -27,13 +27,13 @@ class FeatureEngineer:
             logger.error(f"Error al cargar archivos: {e}")
             return
 
-        df["createdAt"] = pd.to_datetime(df["createdAt"])
+        df["createdAt"] = pd.to_datetime(df["createdAt"], errors="coerce")
         df["date"] = df["createdAt"].dt.floor("D").dt.tz_localize(None)
-        df_encuestas["date"] = pd.to_datetime(df_encuestas["date"]).dt.tz_localize(None)
+        df_encuestas["date"] = pd.to_datetime(df_encuestas["date"], errors="coerce").dt.tz_localize(None)
 
         try:
             df_existing = read_csv_blob(self.output_path)
-            df_existing["date"] = pd.to_datetime(df_existing["date"])
+            df_existing["date"] = pd.to_datetime(df_existing["date"], errors="coerce")
             fechas_nuevas = df["date"].unique()
             df_existing = df_existing[~df_existing["date"].isin(fechas_nuevas)]
         except FileNotFoundError:

@@ -39,6 +39,8 @@ def read_csv_blob(blob_name: str) -> pd.DataFrame:
 
     buffer.seek(0)
     df = pd.read_csv(buffer, low_memory=False, parse_dates=["date"])
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce") 
     print(f"✅ CSV leído: {df.shape}")
     return df
 
@@ -47,6 +49,8 @@ def write_csv_blob(df: pd.DataFrame, blob_name: str) -> None:
     print(f"📤 Subiendo {blob_name}...")
     blob_client = container_client.get_blob_client(blob_name)
     buffer = BytesIO()
+    if "date" in df.columns:
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df.to_csv(buffer, index=False)
     buffer.seek(0)
 
