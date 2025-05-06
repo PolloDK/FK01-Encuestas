@@ -2,9 +2,9 @@ import pandas as pd
 import joblib
 import numpy as np
 from pathlib import Path
-from azure_blob import read_csv_blob, write_csv_blob, download_blob_file
-from config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
-from logger import get_logger
+from src.azure_blob import read_csv_blob, write_csv_blob, download_blob_file
+from src.config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
+from src.logger import get_logger
 from tempfile import NamedTemporaryFile
 
 logger = get_logger(__name__, "predict.log")
