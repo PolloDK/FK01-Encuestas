@@ -102,16 +102,12 @@ def blob_exists(blob_path: str) -> bool:
     blob_client = blob_service_client.get_blob_client(container=AZURE_BLOB_CONTAINER, blob=blob_path)
     return blob_client.exists()
 
-def download_blob(blob_name: str, local_path: str):
-    """Descarga un archivo binario desde Azure Blob Storage y lo guarda localmente."""
-    print(f"📥 Descargando {blob_name} a {local_path}...")
+def download_blob_file(blob_name: str, local_path: str):
+    """Descarga un archivo binario desde Azure Blob Storage a una ruta local."""
     blob_client = container_client.get_blob_client(blob_name)
-
     if not blob_client.exists():
-        raise FileNotFoundError(f"❌ No existe el blob: {blob_name}")
-
+        raise FileNotFoundError(f"❌ No se encontró el blob: {blob_name}")
     with open(local_path, "wb") as f:
-        data = blob_client.download_blob()
-        f.write(data.readall())
-
-    print(f"✅ Descargado: {local_path}")
+        download_stream = blob_client.download_blob()
+        f.write(download_stream.readall())
+    print(f"📥 Descargado {blob_name} a {local_path}")

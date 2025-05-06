@@ -2,8 +2,7 @@ import pandas as pd
 import joblib
 import numpy as np
 from pathlib import Path
-from src.azure_blob import read_csv_blob, write_csv_blob
-from src.azure_blob import download_blob
+from azure_blob import read_csv_blob, write_csv_blob, download_blob_file
 from config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
 from logger import get_logger
 
@@ -12,7 +11,7 @@ logger = get_logger(__name__, "predict.log")
 class Predictor:
     def __init__(self, features_path=FEATURES_DATASET_PATH, model_dir=MODEL_DIR):
         self.features_path = Path(features_path)
-        self.model_dir = Path(model_dir)
+        self.model_dir = model_dir
         # === Aprobación ===
         self.aprobacion_bundle = self._load_model("modelo_aprobacion.pkl")
         # === Desaprobación ===
@@ -20,13 +19,15 @@ class Predictor:
 
     def _load_model(self, filename):
         path = self.model_dir / filename
-        if not path.exists():
-            print(f"📥 Modelo {filename} no encontrado localmente. Descargando desde Azure...")
-            try:
-                download_blob(f"models/{filename}", str(path))
-            except Exception as e:
-                logger.error(f"❌ Error al descargar modelo desde Azure: {e}")
-                return None
+        print(f"📥 Descargando modelo {filename} desde Azure Blob Storage...")
+
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)  # <- asegúrate de que la carpeta existe
+            download_blob_file(f"models/{filename}", str(path))
+            return joblib.load(path)
+        except Exception as e:
+            logger.error(f"❌ Error al descargar o cargar modelo {filename} desde Azure: {e}")
+            return None
 
     def predict(self):
         print("🚀 Entrando a método `predict()`")

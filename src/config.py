@@ -20,12 +20,8 @@ FEATURES_DATASET_PATH = "features_dataset.csv"
 PREDICTIONS_PATH = "predicciones_diarias.csv"
 ENCUESTAS_PATH = "encuestas.csv"
 
-# Rutas de modelos
-MODEL_DIR = BASE_DIR / "models"
-MODEL_XGB_PATH = MODEL_DIR / "modelo_xgb.pkl"
-SCALER_X_PATH = MODEL_DIR / "scaler_X.pkl"
-SCALER_Y_PATH = MODEL_DIR / "scaler_y.pkl"
-FEATURE_NAMES_PATH = MODEL_DIR / "feature_names.pkl"
+# Model 
+MODEL_DIR = Path("models")
 
 # LOGS
 LOGS_DIR = BASE_DIR / "logs"
