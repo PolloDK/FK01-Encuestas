@@ -1,7 +1,10 @@
-
 import sys
+import os
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+# Agrega el directorio raíz del proyecto al sys.path
+ROOT_DIR = Path(__file__).resolve().parents[2]  # Sube 2 niveles desde app/pages/home.py
+sys.path.append(str(ROOT_DIR))
 
 import streamlit as st
 import pandas as pd
