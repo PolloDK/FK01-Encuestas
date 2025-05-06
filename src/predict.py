@@ -2,37 +2,37 @@ import pandas as pd
 import joblib
 import numpy as np
 from pathlib import Path
-from src.azure_blob import read_csv_blob, write_csv_blob, download_blob_file
-from src.config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
-from src.logger import get_logger
+from azure_blob import read_csv_blob, write_csv_blob, download_blob_file
+from config import FEATURES_DATASET_PATH, MODEL_DIR, PREDICTIONS_PATH
+from logger import get_logger
+from tempfile import NamedTemporaryFile
 
 logger = get_logger(__name__, "predict.log")
 
 class Predictor:
-    def __init__(self, features_path=FEATURES_DATASET_PATH, model_dir=MODEL_DIR):
+    def __init__(self, features_path=FEATURES_DATASET_PATH):
         self.features_path = Path(features_path)
-        self.model_dir = model_dir
         # === Aprobación ===
         self.aprobacion_bundle = self._load_model("modelo_aprobacion.pkl")
         # === Desaprobación ===
         self.desaprobacion_bundle = self._load_model("modelo_desaprobacion.pkl")
 
     def _load_model(self, filename):
-        path = self.model_dir / filename
         print(f"📥 Descargando modelo {filename} desde Azure Blob Storage...")
         try:
-            download_blob_file(f"models/{filename}", str(path))
-            model_loaded = joblib.load(path)
-            print(f"🔍 Tipo de modelo cargado: {type(model_loaded)}")
+            # Crear archivo temporal
+            with NamedTemporaryFile(delete=False) as tmpfile:
+                download_blob_file(f"models/{filename}", tmpfile.name)
+                model_loaded = joblib.load(tmpfile.name)
 
+            # Validar que sea un dict (bundle esperado)
             if isinstance(model_loaded, dict):
                 print(f"🔑 Claves del bundle: {model_loaded.keys()}")
+                return model_loaded
             else:
                 print("❌ El modelo cargado no es un diccionario. No se puede usar.")
                 return None
-            print(f"🔍 Contenido del modelo {filename}: {type(model_loaded)}")
-            print(f"🔑 Claves: {getattr(model_loaded, 'keys', lambda: 'no es dict')()}")
-            return model_loaded
+
         except Exception as e:
             logger.error(f"❌ Error al descargar o cargar modelo {filename} desde Azure: {e}")
             return None
