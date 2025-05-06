@@ -49,21 +49,26 @@ def write_csv_blob(df: pd.DataFrame, blob_name: str) -> None:
     print(f"📤 Subiendo {blob_name}...")
     blob_client = container_client.get_blob_client(blob_name)
     buffer = BytesIO()
-    if "date" in df.columns:
-        df["date"] = pd.to_datetime(df["date"], errors="coerce")
     df.to_csv(buffer, index=False)
     buffer.seek(0)
 
     total_size = buffer.getbuffer().nbytes
+
     with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"⬆️ Subiendo {blob_name}") as pbar:
         def progress_hook(current, total):
-            if current is not None:
-                pbar.update(current - pbar.n)
+            # ⚠️ Protege contra valores None
+            if current is not None and isinstance(current, int):
+                try:
+                    pbar.update(current - pbar.n)
+                except Exception:
+                    pass  # evita errores inesperados por inconsistencias en el hook
 
         blob_client.upload_blob(
             buffer,
             overwrite=True,
-            raw_response_hook=lambda resp: progress_hook(resp.context.get('upload_stream_current'), total_size)
+            raw_response_hook=lambda resp: progress_hook(
+                resp.context.get('upload_stream_current'), total_size
+            )
         )
 
     print(f"✅ Archivo actualizado: {blob_name}")
