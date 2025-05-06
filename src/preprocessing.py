@@ -9,9 +9,9 @@ from scipy.special import softmax
 import torch
 import numpy as np
 from tqdm import tqdm
-from config import PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH, RAW_DATA_PATH
-from logger import get_logger
-from azure_blob import read_csv_blob, write_csv_blob, append_csv_blob
+from src.config import PREPROCESSED_PATH, SENTIMENT_DATA_PATH, EMBEDDING_DATA_PATH, PROCESSED_DATA_PATH, RAW_DATA_PATH
+from src.logger import get_logger
+from src.azure_blob import read_csv_blob, write_csv_blob, append_csv_blob
 logger = get_logger(__name__, "preprocessing.log")
 
 nltk.download("stopwords")
