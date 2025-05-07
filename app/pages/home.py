@@ -198,7 +198,7 @@ def show_home():
         st.metric(
             label="",
             value=f"{valor_neg:.1%}",
-            delta=f"{delta_neg:+.1%}" if delta_neg is not None else "N/A",
+            delta=f"{delta_neg * 100:+.1f} pp" if delta_neg is not None else "N/A",
             delta_color="inverse"
         )
         progreso_html = f"""
@@ -257,7 +257,7 @@ def show_home():
             st.metric(
                 label="",
                 value=f"{valor_pct:.1%}",
-                delta=f"{delta_pct:+.1%}" if delta_pct is not None else "N/A",
+                delta=f"{delta_pct * 100:+.1f} pp" if delta_pct is not None else "N/A",
                 delta_color="inverse"
             )
             progreso_html_pct = f"""
