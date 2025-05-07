@@ -41,3 +41,5 @@ models/
 *.swp
 
 respaldos/
+
+.devcontainer/
